@@ -10,7 +10,10 @@
         pkgs = nixpkgs.legacyPackages."${system}";
       in {
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [];
+          buildInputs = with pkgs; [
+            gradle
+            gcc
+          ];
         };
       }
     );

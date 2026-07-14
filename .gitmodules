@@ -1,0 +1,3 @@
+[submodule "ghidra-hd6303"]
+	path = ghidra-hd6303
+	url = https://github.com/arlohb/ghidra-hd6303
