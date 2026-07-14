@@ -1,5 +1,5 @@
 {
-  description = "";
+  description = "An attempt at reverse engineering the Panasonic KX-WL55 Word Processor";
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
