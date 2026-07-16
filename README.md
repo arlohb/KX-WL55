@@ -1,4 +1,19 @@
 
+# Components
+
+- `eprom_reader`
+- Custom Ghidra with support for HD6303 CPU from [depili's Ghidra PR #6314](https://github.com/NationalSecurityAgency/ghidra/pull/6314)
+
+# Using `eprom_reader`
+
+Wire accordingly.
+
+```bash
+cd eprom_reader
+
+make uploadserial
+```
+
 # Building Ghidra
 
 ```bash

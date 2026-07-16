@@ -11,8 +11,12 @@
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            # Ghidra
             gradle
             gcc
+
+            # eprom_reader
+            platformio
           ];
         };
       }
