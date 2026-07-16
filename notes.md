@@ -33,6 +33,14 @@
 
 - 256K each pseudo-static RAM
 
+# Address state on boot
+
+- JM1 is not fitted, so VECT is low, so C000-FFFF is IC6.
+- We're currently *assuming* the first 16K of IC6 because that appears to have a sensible vector table at the end.
+- That would suggest RESET code at 0x851C
+- No other pages of IC6 appear to have RESET code at 0x051C.
+- Guess the RESET code is, therefore, in IC7.
+
 # Links
 
 - [a bored programmer's blog on the KX-WL55 and the printer](https://aboredprogrammer.com/panasonic-wl55-kx-wl55/)
