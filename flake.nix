@@ -14,6 +14,7 @@
             # Ghidra
             gradle
             gcc
+            openjdk
 
             # eprom_reader
             platformio
