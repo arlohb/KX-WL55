@@ -41,6 +41,61 @@
 - No other pages of IC6 appear to have RESET code at 0x051C.
 - Guess the RESET code is, therefore, in IC7.
 
+# Pins
+
+## BA - Bus Available
+
+- Normally low
+- Goes high when CPU accepts $\overline{\text{HALT}}$ and releases the buses
+
+## Ports
+
+| Port   | Address | Data Direction Register |
+|--------|---------|-------------------------|
+| Port 2 | $0003   | $0001, 2 bits           |
+| Port 5 | $0015   | -                       |
+| Port 6 | $0017   | $0016                   |
+
+### Port 2
+
+- 8-bit I/O port
+- DDR made up of 2 bits
+    - Bit 0 decides the I/O direction of $P_{20}$
+    - Bit 1 decides the I/O direction of $P_{21}$ to $P_{27}$
+    - 0 for input and 1 for output
+- Port 2 is also used as an I/O pin for the timers and SCI
+    - When used like this, port 2 except $P_{20}$ becomes an input or output
+        automatically depending on their function regardless of the DDR
+
+### Port 5
+
+- 8-bit input only port
+- Data direction register ($0016)
+    - 0: $\overline{\text{IRQ}_1}$ Enable Bit
+    - 1: $\overline{\text{IRQ}_2}$ Enable Bit
+    - 2: MRE - Memory Ready Enable Bit
+    - 3: HLTE - $\overline{\text{HALT}}$ Enable Bit
+    - 4: unused
+    - 5: unused
+    - 6: RAME - RAM Enable
+    - 7: STBY PWR - Standby Power Bit
+
+# Computation Model
+
+- Program is started from $FFFE-F
+- Double accumulator D is made up of byte accumulators A and B
+- X: index register
+- SP: stack pointer
+- PC: program counter
+- CCR: condition code register
+    - 0 C: Carry / borrow from MSB
+    - 1 V: Overflow, 2's complement
+    - 2 Z: Zero ()
+    - 3 N: Negative (sign bit)
+    - 4 I: Interrupt mask
+    - 5 H: Half carry from bit 3 to bit 4
+    - 6, 7: Unused
+
 # Links
 
 - [a bored programmer's blog on the KX-WL55 and the printer](https://aboredprogrammer.com/panasonic-wl55-kx-wl55/)
