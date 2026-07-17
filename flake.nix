@@ -3,8 +3,10 @@
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
+    hexcvt.url = "./hexcvt";
   };
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, hexcvt }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages."${system}";
@@ -18,6 +20,8 @@
 
             # eprom_reader
             platformio
+
+            (hexcvt.packages."${system}".default)
           ];
         };
       }
