@@ -1,3 +1,6 @@
 [submodule "ghidra-hd6303"]
 	path = ghidra-hd6303
 	url = https://github.com/arlohb/ghidra-hd6303
+[submodule "f9dasm"]
+	path = f9dasm
+	url = https://github.com/Arakula/f9dasm.git
