@@ -36,10 +36,9 @@
 # Address state on boot
 
 - JM1 is not fitted, so VECT is low, so C000-FFFF is IC6.
-- We're currently *assuming* the first 16K of IC6 because that appears to have a sensible vector table at the end.
-- That would suggest RESET code at 0x851C
-- No other pages of IC6 appear to have RESET code at 0x051C.
-- Guess the RESET code is, therefore, in IC7.
+- Apparently page 0x1C000 of IC6 is loaded in to C000 of the memory map
+- Sensible vector table appears at FFEA, with reset vector at D296
+- Apparently sensible reset code at 1D296 in this chip, so D296 in memory map
 
 # Pins
 
