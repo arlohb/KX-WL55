@@ -34,7 +34,7 @@ void setup() {
 
 // 0th bit is the right-most bit
 bool getBit(uint32_t x, uint8_t bit) {
-    return (x & (1 << bit)) >> bit;
+    return (x & (1l << bit)) >> bit;
 }
 
 uint8_t readAddr(uint32_t addr) {
