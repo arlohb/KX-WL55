@@ -9,6 +9,11 @@ P2DDR: ds.b 1
 PORT1: ds.b 1
 PORT2: ds.b 1
 
+    SEG.U LCD
+    ORG $0A00
+LCD00: ds.b 16
+LCD10: ds.b 16
+
     SEG TEXT
     ORG $0
     ds.b 1,$ff
@@ -20,14 +25,110 @@ reset:
     LDAA #$FF
     STAA P2DDR
     LDS #$FF
+    
+    JSR init_lcd
 loop:
     LDX #500
     JSR delayMs
 
+    ; JSR enable_lcd
+
     LDX #500
     JSR buzz_loop
 
+    ; JSR disable_lcd
+
     JMP loop
+
+; Not working
+init_lcd:
+    LDAA #$40
+    STAA LCD10
+    LDAA #$15
+    STAA LCD00
+    LDAA #$85
+    STAA LCD00
+    LDAA #$08
+    STAA LCD00
+    LDAA #$4F
+    STAA LCD00
+    LDAA #$59
+    STAA LCD00
+    LDAA #$81
+    STAA LCD00
+    LDAA #$50
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+
+    LDAA #$5C
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$F0
+    STAA LCD00
+
+    LDAA #$44
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+    LDAA #$80
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+    LDAA #$10
+    STAA LCD00
+    LDAA #$80
+    STAA LCD00
+
+    LDAA #$5A
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+
+    LDAA #$5B
+    STAA LCD10
+    LDAA #$01
+    STAA LCD00
+
+    LDAA #$58
+    STAA LCD10
+    LDAA #$16
+    STAA LCD00
+
+    LDAA #$46
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+
+    LDAA #$5D
+    STAA LCD10
+    LDAA #$05
+    STAA LCD00
+    LDAA #$87
+    STAA LCD00
+
+    LDAA #$4C
+    STAA LCD10
+
+    LDAA #$59
+    STAA LCD10
+
+    RTS
+
+enable_lcd:
+    LDAA #$58
+    STAA $0A10
+    RTS
+
+disable_lcd:
+    LDAA #$59
+    STAA $0A10
+    RTS
 
 ; Param: X is num of loops
 ; Takes ~1ms per loop,
