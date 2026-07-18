@@ -1,0 +1,18 @@
+{
+    "$schema": "https://images.onerom.org/configs/schema.json",
+    "version": 1,
+    "description": "U2",
+    "rom_sets": [
+        {
+            "type": "single",
+            "description": "U2",
+            "roms": [
+                {
+                    "file": "./data/DataU2.bin",
+                    "description": "U2",
+                    "type": "27C010"
+                }
+            ]
+        }
+    ]
+}

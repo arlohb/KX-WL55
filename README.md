@@ -4,6 +4,7 @@
 - `eprom_reader`
 - Custom Ghidra with support for HD6303 CPU from [depili's Ghidra PR #6314](https://github.com/NationalSecurityAgency/ghidra/pull/6314)
 - `f9dasm` for disassembly
+- `onerom` CLI
 
 # Using `eprom_reader`
 
@@ -43,5 +44,15 @@ cd ..
 
 # Run
 ./f9dasm/f9dasm -6301 data/DataU1.bin > data/DataU1.asm
+```
+
+# Using `onerom`
+
+```bash
+# Build onerom CLI, only required first time
+./onerom/build-onerom.sh
+
+# Flashing, can use sudo or setup udev rules
+sudo ./onerom/onerom program --config-file onerom/U2.json
 ```
 
