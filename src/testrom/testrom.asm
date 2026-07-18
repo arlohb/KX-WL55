@@ -17,27 +17,74 @@ PORT2: ds.b 1
     RORG $C000
 
 reset:
-    LDAA #$FF   ; 2 cycles
-    STAA P2DDR   ; 4 cycles
+    LDAA #$FF
+    STAA P2DDR
     LDS #$FF
-; CPU clock is 1.75MHz (7MHz, internally divided by 4)
-; loop total is 15 cycles, at 1.75MHz that's >110kHz, so inaudible
-; with delay on mark and space, 2058+15=2073 ~844Hz
 loop:
-    LDAA #$40   ; 2 cycles
-    STAA PORT2   ; 4 cycles
-    JSR delay
-    LDAA #$00   ; 2 cycles
-    STAA PORT2   ; 4 cycles
-    JSR delay
-    JMP loop    ; 3 cycles
+    LDX #500
+    JSR delayMs
 
-; total is 7 + (256*4) cycles = 1029 cycles, ~588uS at 7MHz
-delay:
-    LDX #256   ; 2 cycles
-.delay_loop:
+    LDX #500
+    JSR buzz_loop
+
+    JMP loop
+
+; Param: X is num of loops
+; Takes ~1ms per loop,
+; making this ~1000Hz, but actually it is lower as not all instructions are counted
+buzz_loop:
+    ; Buzzer on
+    LDAA #$40
+    STAA PORT2
+
+    ; Delay
+    PSHX
+    LDX #5
+    JSR delay100Us
+    PULX
+
+    ; Buzzer off
+    LDAA #$00
+    STAA PORT2
+
+    ; Delay
+    PSHX
+    LDX #5
+    JSR delay100Us
+    PULX
+
+    DEX
+    BNE buzz_loop
+    RTS
+
+; Param: X is num of ms
+delayMs:
+    PSHX
+    LDX #436
+    JSR delayX
+    PULX
+
+    DEX
+    BNE delayMs
+    RTS
+
+; Param: X is num of 100 us
+delay100Us:
+    PSHX
+    LDX #43
+    JSR delayX
+    PULX
+
+    DEX
+    BNE delay100Us
+    RTS
+
+; Param: X is num of loops
+; CPU clock is 1.75MHz (7MHz, internally divided by 4)
+; Delay is 5 + 4X cycles at 1.75MHz, so ~ 2.86 + 2.29X us
+delayX:
     DEX             ;   1 cycle
-    BNE .delay_loop  ;   3 cycles
+    BNE delayX      ;   3 cycles
     RTS             ;   5 cycles
 
 stub_irq:
