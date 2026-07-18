@@ -33,6 +33,11 @@
 
 - 256K each pseudo-static RAM
 
+## LCD Controller - SED1330
+
+[datasheet](./assets/SED1330-datasheet.pdf)
+[technial manual](./assets/SED1330-technical-manual.pdf)
+
 # Address state on boot
 
 - JM1 is not fitted, so VECT is low, so C000-FFFF is IC6.
