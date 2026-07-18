@@ -3,7 +3,7 @@
 mkdir output
 chmod a+rw output
 
-docker run --rm -v $(pwd)/output:/home/build/output \
+podman run --rm -v $(pwd)/output:/home/build/output \
     --name onerom-build \
     ghcr.io/piersfinlayson/onerom-build:latest \
     sh -c './clone.sh &&

@@ -22,6 +22,9 @@
             platformio
 
             (hexcvt.packages."${system}".default)
+
+            # To build onerom
+            podman
           ];
         };
       }
