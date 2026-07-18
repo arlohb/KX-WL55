@@ -25,6 +25,9 @@
 
             # To build onerom
             podman
+
+            # macro assembler
+            dasm
           ];
         };
       }

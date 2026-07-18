@@ -1,0 +1,18 @@
+{
+    "$schema": "https://images.onerom.org/configs/schema.json",
+    "version": 1,
+    "description": "U2-testrom",
+    "rom_sets": [
+        {
+            "type": "single",
+            "description": "U2-testrom",
+            "roms": [
+                {
+                    "file": "./testrom.bin",
+                    "description": "U2-testrom",
+                    "type": "27C010"
+                }
+            ]
+        }
+    ]
+}

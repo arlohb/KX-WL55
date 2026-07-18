@@ -1,3 +1,5 @@
 .direnv/
 ghidra_12.1.2_DEV
 onerom/onerom
+src/**/*.bin
+src/**/*.lst
