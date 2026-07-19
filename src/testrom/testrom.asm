@@ -1,5 +1,4 @@
 ; Test ROM to exercise some hardware and prove we can run code
-
     .processor HD6303
 
     SEG.U IO
@@ -22,21 +21,23 @@ LCD10: ds.b 16
     RORG $C000
 
 reset:
+    LDS #$FF
+
+    LDX #500
+    JSR delay100Us
     LDAA #$FF
     STAA P2DDR
-    LDS #$FF
-    
+
     JSR init_lcd
+
+    JSR write_text
+
 loop:
     LDX #500
     JSR delayMs
 
-    ; JSR enable_lcd
-
-    LDX #500
+    LDX #10
     JSR buzz_loop
-
-    ; JSR disable_lcd
 
     JMP loop
 
@@ -44,7 +45,8 @@ loop:
 init_lcd:
     LDAA #$40
     STAA LCD10
-    LDAA #$15
+    ; LDAA #$15
+    LDAA #$14   ; internal CG ROM
     STAA LCD00
     LDAA #$85
     STAA LCD00
@@ -68,19 +70,19 @@ init_lcd:
     LDAA #$F0
     STAA LCD00
 
-    LDAA #$44
+    LDAA #$44   ; SCROLL
     STAA LCD10
-    LDAA #$00
+    LDAA #$00   ; SAD1L
     STAA LCD00
-    LDAA #$00
+    LDAA #$00   ; SAD1H
     STAA LCD00
-    LDAA #$80
+    LDAA #$80   ; SL1
     STAA LCD00
-    LDAA #$00
+    LDAA #$00   ; SAD2L
     STAA LCD00
-    LDAA #$10
+    LDAA #$10   ; SAD2H
     STAA LCD00
-    LDAA #$80
+    LDAA #$80   ; SL2
     STAA LCD00
 
     LDAA #$5A
@@ -88,9 +90,10 @@ init_lcd:
     LDAA #$00
     STAA LCD00
 
-    LDAA #$5B
+    LDAA #$5B   ; OVLAY
     STAA LCD10
-    LDAA #$01
+    ; LDAA #$01
+    LDAA #$03   ; Prioritised-OR overlay
     STAA LCD00
 
     LDAA #$58
@@ -118,16 +121,72 @@ init_lcd:
     LDAA #$59
     STAA LCD10
 
+    LDAA #$46
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+
+    LDAA #$42
+    STAA LCD10
+    LDAA #$20
+    LDX #1200       ;15 lines * 80 chars per line
+.cls_loop:
+    STAA LCD00
+    DEX
+    BNE .cls_loop
+
+    LDAA #$46
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$10
+    STAA LCD00
+
+    LDAA #$42
+    STAA LCD10
+    LDAA #$00
+    LDX #10480       ;131 lines * 80 bytes per line
+.clg_loop:
+    STAA LCD00
+    DEX
+    BNE .clg_loop
+
+    LDAA #$46
+    STAA LCD10
+    LDAA #$00
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+    RTS
+
+write_text:
+    LDAA #$42
+    STAA LCD10
+    LDAA #'R
+    STAA LCD00
+    LDAA #'E
+    STAA LCD00
+    LDAA #'A
+    STAA LCD00
+    LDAA #'D
+    STAA LCD00
+    LDAA #'Y
+    STAA LCD00
+    LDAA #$0D
+    STAA LCD00
+
     RTS
 
 enable_lcd:
-    LDAA #$58
-    STAA $0A10
+    LDAA #$59
+    STAA LCD10
     RTS
 
 disable_lcd:
-    LDAA #$59
-    STAA $0A10
+    LDAA #$58
+    STAA LCD10
     RTS
 
 ; Param: X is num of loops
