@@ -24,7 +24,7 @@ reset:
     LDS #$FF
 
     LDX #500
-    JSR delay100Us
+    JSR delay_100_us
     LDAA #$FF
     STAA P2DDR
 
@@ -34,7 +34,7 @@ reset:
 
 loop:
     LDX #500
-    JSR delayMs
+    JSR delay_ms
 
     LDX #10
     JSR buzz_loop
@@ -200,7 +200,7 @@ buzz_loop:
     ; Delay
     PSHX
     LDX #5
-    JSR delay100Us
+    JSR delay_100_us
     PULX
 
     ; Buzzer off
@@ -210,7 +210,7 @@ buzz_loop:
     ; Delay
     PSHX
     LDX #5
-    JSR delay100Us
+    JSR delay_100_us
     PULX
 
     DEX
@@ -218,33 +218,33 @@ buzz_loop:
     RTS
 
 ; Param: X is num of ms
-delayMs:
+delay_ms:
     PSHX
     LDX #436
-    JSR delayX
+    JSR delay_x
     PULX
 
     DEX
-    BNE delayMs
+    BNE delay_ms
     RTS
 
 ; Param: X is num of 100 us
-delay100Us:
+delay_100_us:
     PSHX
     LDX #43
-    JSR delayX
+    JSR delay_x
     PULX
 
     DEX
-    BNE delay100Us
+    BNE delay_100_us
     RTS
 
 ; Param: X is num of loops
 ; CPU clock is 1.75MHz (7MHz, internally divided by 4)
 ; Delay is 5 + 4X cycles at 1.75MHz, so ~ 2.86 + 2.29X us
-delayX:
+delay_x:
     DEX             ;   1 cycle
-    BNE delayX      ;   3 cycles
+    BNE delay_x     ;   3 cycles
     RTS             ;   5 cycles
 
 stub_irq:
