@@ -13,6 +13,12 @@ PORT2: ds.b 1
 KEYBUF_PREV: ds.b 9
 KEYBUF_NEXT: ds.b 9
 
+CURPOS_RC:
+CURPOS_ROW:  ds.b 1
+CURPOS_COL:  ds.b 1
+
+SCROLL_REG: ds.w 1
+
 SCRATCH: ds.b 1
 
     SEG.U KEYSCAN
@@ -48,10 +54,10 @@ LCD10: ds.b 16
 ; | 9   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
 
 KEYCHARS:
-    BYTE 'M,'_,'_,' ,'_,'_,'_,'_
+    BYTE 'M,'_,'_,' ,'_,'_,'_,$C
     BYTE '_,'B,'_,'_,'_,'_,'_,'_
     BYTE 'N,'V,'_,',,'.,'_,'/,'_
-    BYTE 'J,'G,'_,'_,'_,'_,'@,'_
+    BYTE 'J,'G,'_,$D,'_,'_,'@,'_
     BYTE 'H,'F,'_,'K,'L,'_,';,'1
     BYTE 'U,'T,'C,'_,'_,'X,'[,'Z
     BYTE 'Y,'R,'D,'I,'O,'S,'P,'A
@@ -71,8 +77,6 @@ reset:
     JSR init_lcd
 
     JSR setup_keybuf
-
-    ; JSR write_text
 
     PSHB
     LDAA #0
@@ -102,6 +106,7 @@ put_hex_nibble:
     RTS
 
 ; Params: A - byte to print as hex
+    SUBROUTINE
 put_hex:
     PSHA
     ANDA #$f0
@@ -114,6 +119,14 @@ put_hex:
 
     ANDA #$0f
     JSR put_hex_nibble
+    RTS
+
+; Params: D - word to print as hex
+    SUBROUTINE
+put_hex_word:
+    JSR put_hex
+    TBA
+    JSR put_hex
     RTS
 
 ; Params: A - byte to print as binary
@@ -277,11 +290,11 @@ print_keybuf:
 
     LDAA KEYBUF_PREV,x
     JSR put_bin
-    LDAA #' 
+    LDAA #'     ; space
     JSR putch
     LDAA KEYBUF_NEXT,x
     JSR put_bin
-    LDAA #' 
+    LDAA #'     ; space
     JSR putch
 
     LDAA KEYBUF_PREV,x
@@ -383,16 +396,104 @@ init_lcd:
 
     LDAA #$42
     STAA LCD10
-    LDAA #$20
-    LDX #1200       ;15 lines * 80 chars per line
-.cls_loop:
-    STAA LCD00
-    DEX
-    BNE .cls_loop
-
+    JSR cls
     LDAA #$46
     STAA LCD10
     LDAA #$00
+    STAA LCD00
+    LDAA #$00
+    STAA LCD00
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+    SUBROUTINE
+set_scroll_reg:
+    PSHA
+    LDAA #$44
+    STAA LCD10
+    PULA
+    STD SCROLL_REG
+    STAB LCD00
+    STAA LCD00
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+    SUBROUTINE
+scroll_lcd_up:
+    LDD SCROLL_REG
+    ADDD #80
+    JSR set_scroll_reg
+    JSR get_cursor_pos
+    CLRB
+    JSR set_cursor_pos
+    LDX #$160
+    JSR lcd_spaces
+    JSR restore_cursor_pos
+    RTS
+
+    SUBROUTINE
+inc_cur_pos:
+    LDAA CURPOS_COL
+    INCA
+    CMPA #80
+    BLT .done
+    ; new line
+    INC CURPOS_ROW
+    CLRA
+.done
+    STAA CURPOS_COL
+    RTS
+
+; Params: A - character to print
+    SUBROUTINE
+putch:
+    CMPA #$D
+    BEQ new_line
+    CMPA #$C
+    BEQ cls
+    ; printable character
+    STAA LCD00
+    JSR inc_cur_pos
+    RTS
+
+    SUBROUTINE
+new_line:
+    JSR get_cursor_pos
+    CMPA #13
+    BLT .no_scroll
+    JSR scroll_lcd_up
+    BRA .done
+.no_scroll
+    INCA
+    CLRB
+    JSR set_cursor_pos
+.done
+    RTS
+
+; Params: X - number of spaces to output
+    SUBROUTINE
+lcd_spaces:
+    LDAA #$20
+.loop:
+    STAA LCD00
+    DEX
+    BNE .loop
+    RTS
+
+    SUBROUTINE
+cls:
+    LDD #0
+    JSR set_scroll_reg
+    LDD #0
+    JSR set_cursor_pos
+    LDX #1200       ;15 lines * 80 chars per line
+    JSR lcd_spaces
+
+    LDAA #$46
+    STAA LCD10
+    LDAA #0
     STAA LCD00
     LDAA #$10
     STAA LCD00
@@ -406,40 +507,15 @@ init_lcd:
     DEX
     BNE .clg_loop
 
-    LDAA #$46
-    STAA LCD10
-    LDAA #$00
-    STAA LCD00
-    LDAA #$00
-    STAA LCD00
-    LDAA #$42
-    STAA LCD10
+    LDD #0
+    JSR set_cursor_pos
     RTS
 
-; Params: A
-putch:
-    STAA LCD00
-    RTS
-
-write_text:
-    LDAA #'R
-    STAA LCD00
-    LDAA #'E
-    STAA LCD00
-    LDAA #'A
-    STAA LCD00
-    LDAA #'D
-    STAA LCD00
-    LDAA #'Y
-    STAA LCD00
-    LDAA #$0D
-    STAA LCD00
-
-    RTS
 
 ; Params: A - row num
 ;         B - col num
 ; Return: D - cursor addr
+    SUBROUTINE
 calc_cursor_addr:
     PSHB
     LDAB #80
@@ -448,12 +524,14 @@ calc_cursor_addr:
     PULB
     ABX
     XGDX
+    ADDD SCROLL_REG
 
     RTS
 
 ; Params: A - row num
 ;         B - col num
 set_cursor_pos:
+    STD CURPOS_RC
     JSR calc_cursor_addr
 
     PSHA
@@ -468,6 +546,20 @@ set_cursor_pos:
     STAA LCD10
     RTS
 
+; Returns:  A - row num
+;           B - col num
+    SUBROUTINE
+get_cursor_pos:
+    LDD  CURPOS_RC
+    RTS
+
+    SUBROUTINE
+restore_cursor_pos:
+    JSR get_cursor_pos
+    JSR set_cursor_pos
+    RTS
+
+    SUBROUTINE
 enable_lcd:
     LDAA #$59
     STAA LCD10
