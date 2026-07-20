@@ -100,6 +100,20 @@
     - 5 H: Half carry from bit 3 to bit 4
     - 6, 7: Unused
 
+# Keyboard Matrix
+
+| Row | 7 | 6 | 5         | 4     | 3   | 2     | 1           | 0    |
+|-----|---|---|-----------|-------|-----|-------|-------------|------|
+| 1   | M |   | ↑         | space | R󰘶  | code  | quick erase | <->  |
+| 2   | - | B | print     | →     | ←   | reloc | ↓           | tab  |
+| 3   | N | V | next page | ,     | .   | alt   | /           | caps |
+| 4   | J | G | help      | 󰌑     | ÷   |       | @           | L󰘶   |
+| 5   | H | F | menu      | K     | L   |       | ;           | 1    |
+| 6   | U | T | C         | 󰁮     | 󱦒   | X     | []          | Z    |
+| 7   | Y | R | D         | I     | O   | S     | P           | A    |
+| 8   | 7 | 5 | E         | =     | <-- | W     | -->         | Q    |
+| 9   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
+
 # Links
 
 - [a bored programmer's blog on the KX-WL55 and the printer](https://aboredprogrammer.com/panasonic-wl55-kx-wl55/)
