@@ -121,4 +121,5 @@
 - [KX-W1000 service manual](./assets/kx-w1000-service-manual.pdf)
 - [KX-W1500 service manual](https://www.manualslib.com/manual/3353446/Panasonic-Kx-W1500.html)
 - [panasonic_typewriter_interface](https://github.com/xunker/panasonic_typewriter_interface)
+- [emulator](https://pypi.org/project/m68hc11/)
 
