@@ -8,6 +8,14 @@ P2DDR: ds.b 1
 PORT1: ds.b 1
 PORT2: ds.b 1
 
+    SEG.U KEYSCAN
+    ORG $0400
+KEYSCAN: ds.b 1
+
+    SEG.U KEYMATRIX
+    ORG $0410
+KEYMATRIX: ds.b 1
+
     SEG.U LCD
     ORG $0A00
 LCD00: ds.b 16
@@ -27,21 +35,100 @@ reset:
     JSR delay_100_us
     LDAA #$FF
     STAA P2DDR
+    LDAA #$00
+    STAA PORT2
 
     JSR init_lcd
 
-    JSR write_text
+    ; JSR write_text
 
 loop:
-    LDX #500
-    JSR delay_ms
+    JSR scan_all
 
-    LDX #10
-    JSR buzz_loop
+    LDX #1
+    JSR delay_ms
 
     JMP loop
 
-; Not working
+; Params: A - prints lower 4 bits as hex char
+put_hex_nibble:
+    CMPA #9
+    BGT .letter
+    ADDA #48
+    BRA .print
+.letter
+    ADDA #55
+.print
+    JSR putch
+    RTS
+
+; Params: A - byte to print as hex
+put_hex:
+    PSHA
+    ANDA #$f0
+    LSRA
+    LSRA
+    LSRA
+    LSRA
+    JSR put_hex_nibble
+    PULA
+
+    ANDA #$0f
+    JSR put_hex_nibble
+    RTS
+
+; Params: A - byte to print as binary
+put_bin:
+V   SET $80
+U   SET 7
+    REPEAT 8
+        PSHA
+        ANDA #V
+        REPEAT U
+            LSRA
+        REPEND
+        ADDA #48
+        JSR putch
+        PULA
+V   SET V/2
+U   SET U-1
+    REPEND
+
+    RTS
+
+scan_all:
+    LDAA #1
+.scan_loop
+    PSHA
+    JSR scan_row
+    PULA
+
+    INCA
+    CMPA #8
+    BLS .scan_loop
+
+; Params: A - row to scan
+scan_row:
+    PSHA
+    DECA
+    LDAB #0
+    JSR set_cursor_pos
+    PULA
+
+    STAA KEYSCAN
+    JSR put_hex
+    LDAA #' 
+    JSR putch
+
+    LDX #10
+    JSR delay_100_us
+
+    LDAA KEYMATRIX
+    JSR put_bin
+    LDAA #' 
+    JSR putch
+    RTS
+
 init_lcd:
     LDAA #$40
     STAA LCD10
@@ -159,11 +246,16 @@ init_lcd:
     STAA LCD00
     LDAA #$00
     STAA LCD00
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+; Params: A
+putch:
+    STAA LCD00
     RTS
 
 write_text:
-    LDAA #$42
-    STAA LCD10
     LDAA #'R
     STAA LCD00
     LDAA #'E
@@ -179,13 +271,48 @@ write_text:
 
     RTS
 
+; Params: A - row num
+;         B - col num
+; Return: D - cursor addr
+calc_cursor_addr:
+    PSHB
+    LDAB #80
+    MUL
+    XGDX
+    PULB
+    ABX
+    XGDX
+
+    RTS
+
+; Params: A - row num
+;         B - col num
+set_cursor_pos:
+    JSR calc_cursor_addr
+
+    PSHA
+    LDAA #$46
+    STAA LCD10
+    PULA
+
+    STAB LCD00
+    STAA LCD00
+
+    LDAA #$42
+    STAA LCD10
+    RTS
+
 enable_lcd:
     LDAA #$59
+    STAA LCD10
+    LDAA #$42
     STAA LCD10
     RTS
 
 disable_lcd:
     LDAA #$58
+    STAA LCD10
+    LDAA #$42
     STAA LCD10
     RTS
 
