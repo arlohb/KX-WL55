@@ -8,6 +8,24 @@ P2DDR: ds.b 1
 PORT1: ds.b 1
 PORT2: ds.b 1
 
+
+; | Row | 7 | 6 | 5         | 4     | 3   | 2     | 1           | 0    |
+; |-----|---|---|-----------|-------|-----|-------|-------------|------|
+; | 1   | M |   | ↑         | space | R󰘶  | code  | quick erase | <->  |
+; | 2   | - | B | print     | →     | ←   | reloc | ↓           | tab  |
+; | 3   | N | V | next page | ,     | .   | alt   | /           | caps |
+; | 4   | J | G | help      | 󰌑     | ÷   |       | @           | L󰘶   |
+; | 5   | H | F | menu      | K     | L   |       | ;           | 1    |
+; | 6   | U | T | C         | 󰁮     | 󱦒   | X     | []          | Z    |
+; | 7   | Y | R | D         | I     | O   | S     | P           | A    |
+; | 8   | 7 | 5 | E         | =     | <-- | W     | -->         | Q    |
+; | 9   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
+
+    SEG.U INT_RAM
+    ORG $0040
+KEYBUF_PREV: ds.b 9
+KEYBUF_NEXT: ds.b 9
+
     SEG.U KEYSCAN
     ORG $0400
 KEYSCAN: ds.b 1
@@ -40,10 +58,13 @@ reset:
 
     JSR init_lcd
 
+    JSR setup_keybuf
+
     ; JSR write_text
 
 loop:
-    JSR scan_all
+    JSR read_keybuf
+    JSR print_keybuf_next
 
     LDX #1
     JSR delay_ms
@@ -96,37 +117,77 @@ U   SET U-1
 
     RTS
 
-scan_all:
-    LDAA #1
-.scan_loop
-    PSHA
-    JSR scan_row
+setup_keybuf:
+    LDAA #$ff
+    LDX #18
+
+.keybuf_loop
+    DEX
+    STAA KEYBUF_PREV,x
+
+    CPX #$ff
+    BNE .keybuf_loop
+    
+    RTS
+
+read_keybuf:
+    LDX #0
+
+.read_keybuf_loop
+    PSHX
+    PSHX
     PULA
+    PULA
+    JSR read_keybuf_row
+    PULX
+
+    INX
+    CPX #9
+    BNE .read_keybuf_loop
+
+    RTS
+
+; Params: A - row to scan, 0-8
+read_keybuf_row:
+    PSHA
+    LDAB #0
+    PSHB
 
     INCA
-    CMPA #8
-    BLS .scan_loop
-
-; Params: A - row to scan
-scan_row:
-    PSHA
-    DECA
-    LDAB #0
-    JSR set_cursor_pos
-    PULA
-
     STAA KEYSCAN
-    JSR put_hex
-    LDAA #' 
-    JSR putch
 
     LDX #10
     JSR delay_100_us
 
     LDAA KEYMATRIX
+    PULX
+    STAA KEYBUF_NEXT,x
+
+    RTS
+
+print_keybuf_next:
+    LDAA #0
+    LDAB #0
+    JSR set_cursor_pos
+
+    LDX #0
+
+.print_keybuf_loop
+    PSHX
+    PSHX
+    PULA
+    PULA
+    LDAB #0
+    JSR set_cursor_pos
+    PULX
+
+    LDAA KEYBUF_NEXT,x
     JSR put_bin
-    LDAA #' 
-    JSR putch
+
+    INX
+    CPX #9
+    BNE .print_keybuf_loop
+
     RTS
 
 init_lcd:
