@@ -45,6 +45,9 @@ cd ..
 # Run
 ./f9dasm/f9dasm -6301 data/DataU1.bin > data/DataU1.asm
 ```
+# Assembling with `dasm`
+
+See https://dasm-assembler.github.io/
 
 # Using `onerom`
 
