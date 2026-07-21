@@ -1,15 +1,15 @@
 {
     "$schema": "https://images.onerom.org/configs/schema.json",
     "version": 1,
-    "description": "U2-testrom",
+    "description": "U2-PanicOS",
     "rom_sets": [
         {
             "type": "single",
-            "description": "U2-testrom",
+            "description": "U2-PanicOS",
             "roms": [
                 {
-                    "file": "./testrom.bin",
-                    "description": "U2-testrom",
+                    "file": "./PanicOS.bin",
+                    "description": "U2-PanicOS",
                     "type": "27C010"
                 }
             ]
