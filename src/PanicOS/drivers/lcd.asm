@@ -1,5 +1,5 @@
-/cls
-init_lcd:
+
+lcd_init:
     LDAA #$40
     STAA LCD10
     ; LDAA #$15
@@ -87,7 +87,7 @@ init_lcd:
 
     LDAA #$42
     STAA LCD10
-    JSR cls
+    JSR _cls
     LDAA #$46
     STAA LCD10
     LDAA #$00
@@ -98,8 +98,82 @@ init_lcd:
     STAA LCD10
     RTS
 
+; Params: A - character to print
     SUBROUTINE
-set_scroll_reg:
+lcd_putch:
+    CMPA #$D
+    BEQ _new_line
+    CMPA #$C
+    BEQ .cls
+    ; printable character
+    STAA LCD00
+    JSR _inc_cur_pos
+    RTS
+.cls
+    JMP _cls
+
+    SUBROUTINE
+_new_line:
+    JSR _get_cursor_pos
+    CMPA #13
+    BLT .no_scroll
+    JSR _lcd_scroll_up
+    BRA .done
+.no_scroll
+    INCA
+    CLRB
+    JSR lcd_set_cursor_pos
+.done
+    RTS
+
+; Params: A - row num
+;         B - col num
+lcd_set_cursor_pos:
+    STD CURPOS_RC
+    JSR _calc_cursor_addr
+
+    PSHA
+    LDAA #$46
+    STAA LCD10
+    PULA
+
+    STAB LCD00
+    STAA LCD00
+
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+    SUBROUTINE
+lcd_enable:
+    LDAA #$59
+    STAA LCD10
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+lcd_disable:
+    LDAA #$58
+    STAA LCD10
+    LDAA #$42
+    STAA LCD10
+    RTS
+
+    SUBROUTINE
+_lcd_scroll_up:
+    LDD SCROLL_REG
+    ADDD #80
+    JSR _set_scroll_reg
+    JSR _get_cursor_pos
+    CLRB
+    JSR lcd_set_cursor_pos
+    LDX #$160
+    JSR _lcd_spaces
+    JSR _restore_cursor_pos
+    RTS
+
+    SUBROUTINE
+_set_scroll_reg:
     PSHA
     LDAA #$44
     STAA LCD10
@@ -112,20 +186,7 @@ set_scroll_reg:
     RTS
 
     SUBROUTINE
-scroll_lcd_up:
-    LDD SCROLL_REG
-    ADDD #80
-    JSR set_scroll_reg
-    JSR get_cursor_pos
-    CLRB
-    JSR set_cursor_pos
-    LDX #$160
-    JSR lcd_spaces
-    JSR restore_cursor_pos
-    RTS
-
-    SUBROUTINE
-inc_cur_pos:
+_inc_cur_pos:
     LDAA CURPOS_COL
     INCA
     CMPA #80
@@ -139,7 +200,7 @@ inc_cur_pos:
 
 ; Params: X - number of spaces to output
     SUBROUTINE
-lcd_spaces:
+_lcd_spaces:
     LDAA #$20
 .loop:
     STAA LCD00
@@ -148,13 +209,13 @@ lcd_spaces:
     RTS
 
     SUBROUTINE
-cls:
+_cls:
     LDD #0
-    JSR set_scroll_reg
+    JSR _set_scroll_reg
     LDD #0
-    JSR set_cursor_pos
+    JSR lcd_set_cursor_pos
     LDX #1200       ;15 lines * 80 chars per line
-    JSR lcd_spaces
+    JSR _lcd_spaces
 
     LDAA #$46
     STAA LCD10
@@ -173,7 +234,7 @@ cls:
     BNE .clg_loop
 
     LDD #0
-    JSR set_cursor_pos
+    JSR lcd_set_cursor_pos
     RTS
 
 
@@ -181,7 +242,7 @@ cls:
 ;         B - col num
 ; Return: D - cursor addr
     SUBROUTINE
-calc_cursor_addr:
+_calc_cursor_addr:
     PSHB
     LDAB #80
     MUL
@@ -193,49 +254,16 @@ calc_cursor_addr:
 
     RTS
 
-; Params: A - row num
-;         B - col num
-set_cursor_pos:
-    STD CURPOS_RC
-    JSR calc_cursor_addr
-
-    PSHA
-    LDAA #$46
-    STAA LCD10
-    PULA
-
-    STAB LCD00
-    STAA LCD00
-
-    LDAA #$42
-    STAA LCD10
-    RTS
-
 ; Returns:  A - row num
 ;           B - col num
     SUBROUTINE
-get_cursor_pos:
+_get_cursor_pos:
     LDD  CURPOS_RC
     RTS
 
     SUBROUTINE
-restore_cursor_pos:
-    JSR get_cursor_pos
-    JSR set_cursor_pos
-    RTS
-
-    SUBROUTINE
-enable_lcd:
-    LDAA #$59
-    STAA LCD10
-    LDAA #$42
-    STAA LCD10
-    RTS
-
-disable_lcd:
-    LDAA #$58
-    STAA LCD10
-    LDAA #$42
-    STAA LCD10
+_restore_cursor_pos:
+    JSR _get_cursor_pos
+    JSR lcd_set_cursor_pos
     RTS
 

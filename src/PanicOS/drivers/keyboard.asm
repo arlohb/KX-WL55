@@ -146,39 +146,3 @@ read_keybuf_row:
 
     RTS
 
-print_keybuf:
-    LDAA #0
-    LDAB #0
-    JSR set_cursor_pos
-
-    LDX #0
-
-.print_keybuf_loop
-    PSHX
-    PSHX
-    PULA
-    PULA
-    LDAB #0
-    JSR set_cursor_pos
-    PULX
-
-    LDAA KEYBUF_PREV,x
-    JSR put_bin
-    LDAA #'     ; space
-    JSR putch
-    LDAA KEYBUF_NEXT,x
-    JSR put_bin
-    LDAA #'     ; space
-    JSR putch
-
-    LDAA KEYBUF_PREV,x
-    COMA
-    ANDA KEYBUF_NEXT,x
-    JSR put_bin
-
-    INX
-    CPX #9
-    BNE .print_keybuf_loop
-
-    RTS
-

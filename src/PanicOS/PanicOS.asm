@@ -19,19 +19,19 @@ reset:
     LDAA #$00
     STAA PORT2
 
-    JSR init_lcd
+    JSR lcd_init
 
     JSR setup_keybuf
 
     PSHB
     LDAA #0
     LDAB #0
-    JSR set_cursor_pos
+    JSR lcd_set_cursor_pos
     PULB
 
 loop:
     JSR getch
-    JSR putch
+    JSR lcd_putch
 
     LDX #10
     JSR delay_ms
@@ -47,7 +47,7 @@ put_hex_nibble:
 .letter
     ADDA #55
 .print
-    JSR putch
+    JSR lcd_putch
     RTS
 
 ; Params: A - byte to print as hex
@@ -85,7 +85,7 @@ U   SET 7
             LSRA
         REPEND
         ADDA #48
-        JSR putch
+        JSR lcd_putch
         PULA
 V   SET V/2
 U   SET U-1
@@ -93,32 +93,40 @@ U   SET U-1
 
     RTS
 
-; Params: A - character to print
-    SUBROUTINE
-putch:
-    CMPA #$D
-    BEQ new_line
-    CMPA #$C
-    BEQ .cls
-    ; printable character
-    STAA LCD00
-    JSR inc_cur_pos
-    RTS
-.cls
-    JMP cls
+print_keybuf:
+    LDAA #0
+    LDAB #0
+    JSR lcd_set_cursor_pos
 
-    SUBROUTINE
-new_line:
-    JSR get_cursor_pos
-    CMPA #13
-    BLT .no_scroll
-    JSR scroll_lcd_up
-    BRA .done
-.no_scroll
-    INCA
-    CLRB
-    JSR set_cursor_pos
-.done
+    LDX #0
+
+.print_keybuf_loop
+    PSHX
+    PSHX
+    PULA
+    PULA
+    LDAB #0
+    JSR lcd_set_cursor_pos
+    PULX
+
+    LDAA KEYBUF_PREV,x
+    JSR put_bin
+    LDAA #'     ; space
+    JSR lcd_putch
+    LDAA KEYBUF_NEXT,x
+    JSR put_bin
+    LDAA #'     ; space
+    JSR lcd_putch
+
+    LDAA KEYBUF_PREV,x
+    COMA
+    ANDA KEYBUF_NEXT,x
+    JSR put_bin
+
+    INX
+    CPX #9
+    BNE .print_keybuf_loop
+
     RTS
 
 ; Param: X is num of loops
