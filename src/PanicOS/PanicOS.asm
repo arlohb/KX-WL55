@@ -10,6 +10,8 @@
     INCLUDE "drivers/lcd.asm"
     INCLUDE "time/delay.asm"
 
+    INCLUDE "applications/mikbug.asm"
+
 reset:
     LDS #$FF
 
@@ -29,6 +31,8 @@ reset:
     LDAB #0
     JSR lcd_set_cursor_pos
     PULB
+
+    JMP mikbug_start
 
 loop:
     JSR keyb_getch
@@ -173,6 +177,6 @@ TOI:    ds.w 1,stub_irq ; FFF2
 OCI:    ds.w 1,stub_irq ; FFF4
 ICI:    ds.w 1,stub_irq ; FFF6
 IRQ1:   ds.w 1,stub_irq ; FFF8
-SWI:    ds.w 1,stub_irq ; FFFA
+SWI:    ds.w 1,mikbug_swi ; FFFA
 NMI:    ds.w 1,stub_irq ; FFFC
 RESET:  ds.w 1,reset    ; FFFE

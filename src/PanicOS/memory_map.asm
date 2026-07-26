@@ -18,6 +18,18 @@ SCROLL_REG: ds.w 1
 
 SCRATCH: ds.b 1
 
+; MIKBUG application RAM
+SP      ds.b    1         ;S-HIGH
+        ds.b    1         ;S-LOW
+
+XHI     ds.b    1         ;XREG HIGH
+XLOW    ds.b    1         ;XREG LOW
+        ds.b    46
+STACK   ds.b    1         ;STACK POINTER
+
+
+;       OPT    MEMORY
+        ORG    $E000
     SEG.U KEYSCAN
     ORG $0400
 KEYSCAN: ds.b 1
