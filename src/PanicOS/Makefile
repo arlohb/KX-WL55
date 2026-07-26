@@ -1,4 +1,5 @@
-PanicOS.bin: *.asm drivers/*.asm
+PanicOS.bin: *.asm drivers/*.asm time/*.asm
+	rm PanicOS.bin
 	dasm PanicOS.asm -f3 -lPanicOS.lst -oPanicOS.bin
 
 burn: PanicOS.bin

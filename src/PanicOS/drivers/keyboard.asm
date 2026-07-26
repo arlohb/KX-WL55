@@ -22,18 +22,25 @@ KEYCHARS:
     BYTE '7,'5,'E,'=,'_,'W,'_,'Q
     BYTE '6,'4,'3,'8,'9,'2,'0,'_
 
-; Loop until a key is released
-; Return: A - ASCII char
+; Function: keyb_getch
+; Loop until a key is released, return the ASCII value
+; Parameters: None
+; Returns: A - ASCII char
 ; Locals: X - Row
 ;         B - Col
 ;         A - Col mask
 ;         SCRATCH - Keybuf output row
-getch:
-    JSR update_keybuf
+    SUBROUTINE
+keyb_getch:
+    PSHB
+    PSHX
+
+.loop
+    JSR _update_keybuf
 
     LDX #0
 
-.getch_loop
+.loop_row
     LDAB #0
 
     LDAA KEYBUF_PREV,X
@@ -43,24 +50,24 @@ getch:
 
     LDAA #$80
 
-.getch_loop_col
+.loop_col
     PSHA
     ANDA SCRATCH
-    BNE .getch_key
+    BNE .got_key
     PULA
 
     LSRA
     INCB
     CMPB #8
-    BNE .getch_loop_col
+    BNE .loop_col
 
     INX
     CPX #9
-    BNE .getch_loop
+    BNE .loop_row
 
-    BRA getch
+    BRA .loop
 
-.getch_key
+.got_key
     ; Pop stack, but we don't use this value
     PULA
     ; At this point, X is row, B is col
@@ -78,58 +85,94 @@ getch:
     ABX
     LDAA 0,X
 
+    PULX
+    PULB
     RTS
 
-setup_keybuf:
+; Function: keyb_init
+; Initialises the keyboard driver by setting up the buffer
+; Parameters: None
+; Returns: None
+    SUBROUTINE
+keyb_init:
+    PSHA
+    PSHX
+
     LDAA #$ff
     LDX #18
 
-.keybuf_loop
+.loop
     DEX
     STAA KEYBUF_PREV,X
 
     CPX #$01
-    BNE .keybuf_loop
+    BNE .loop
 
+    PULX
+    PULA
     RTS
 
-update_keybuf:
-    JSR keybuf_copy_next_prev
-    JSR read_keybuf_next
+; Function: _update_keybuf
+; Maintains two copies of the keyboard hardware state.
+; Copies the old values into KEYBUF_PREV and reads the
+; latest state into KEYBUF_NEXT.
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A,B,X regs
+    SUBROUTINE
+_update_keybuf:
+    JSR _keybuf_copy_next_prev
+    JSR _read_keybuf_next
     RTS
 
-keybuf_copy_next_prev:
+; Function: _keybuf_copy_next_prev
+; Copies the old values from KEYBUF_NEXT to KEYBUF_PREV
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A,X regs
+    SUBROUTINE
+_keybuf_copy_next_prev:
     LDX #0
 
-.keybuf_copy_loop:
+.loop:
     LDAA KEYBUF_NEXT,X
     STAA KEYBUF_PREV,X
 
     INX
     CPX #9
-    BNE .keybuf_copy_loop
+    BNE .loop
 
     RTS
 
-read_keybuf_next:
+; Function: _read_keybuf_next
+; Reads the current keyboard hardware state into KEYBUF_NEXT
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A,B,X regs
+    SUBROUTINE
+_read_keybuf_next:
     LDX #0
 
-.read_keybuf_next_loop
+.loop
     PSHX
     PSHX
     PULA
     PULA
-    JSR read_keybuf_row
+    JSR _read_keybuf_row
     PULX
 
     INX
     CPX #9
-    BNE .read_keybuf_next_loop
+    BNE .loop
 
     RTS
 
+; Function: _read_keybuf_row
+; Reads a keyboard scan row and stores it in appropriate byte
+; of the KEYBUF_NEXT buffer
 ; Params: A - row to scan, 0-8
-read_keybuf_row:
+; NOTE: Assumes caller saves B,X regs
+_read_keybuf_row:
     PSHA
     LDAB #0
     PSHB

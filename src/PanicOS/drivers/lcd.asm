@@ -1,5 +1,10 @@
-
+; Function: lcd_init
+; Initialised the LCD hardware module
+; Parameters: None
+; Returns: None
+    SUBROUTINE
 lcd_init:
+    PSHA
     LDAA #$40
     STAA LCD10
     ; LDAA #$15
@@ -96,9 +101,13 @@ lcd_init:
     STAA LCD00
     LDAA #$42
     STAA LCD10
+    PULA
     RTS
 
-; Params: A - character to print
+; Function: lcd_putch
+; Outputs an ASCII character to the LCD, including control chars
+; Parameters: A - character to print
+; Returns: None
     SUBROUTINE
 lcd_putch:
     CMPA #$D
@@ -114,6 +123,7 @@ lcd_putch:
 
     SUBROUTINE
 _new_line:
+    PSHB
     JSR _get_cursor_pos
     CMPA #13
     BLT .no_scroll
@@ -124,10 +134,15 @@ _new_line:
     CLRB
     JSR lcd_set_cursor_pos
 .done
+    PULB
     RTS
 
-; Params: A - row num
-;         B - col num
+; Function: lcd_set_cursor_pos
+; Sets the LCD module cursor position in text mode,
+; then returns to MWRITE mode.
+; Parameters: A - row num, B - col num
+; Returns: None
+    SUBROUTINE
 lcd_set_cursor_pos:
     STD CURPOS_RC
     JSR _calc_cursor_addr
@@ -144,23 +159,42 @@ lcd_set_cursor_pos:
     STAA LCD10
     RTS
 
+; Function: lcd_enable
+; Enables an already-initialised LCD module
+; Parameters: None
+; Returns: None
     SUBROUTINE
 lcd_enable:
+    PSHA
     LDAA #$59
     STAA LCD10
     LDAA #$42
     STAA LCD10
+    PULA
     RTS
 
+; Function: lcd_disable
+; Disables the LCD module
+; Parameters: None
+; Returns: None
+    SUBROUTINE
 lcd_disable:
+    PSHA
     LDAA #$58
     STAA LCD10
     LDAA #$42
     STAA LCD10
+    PULA
     RTS
 
+; Function: _lcd_scroll_up
+; Scroll the LCD text layer up one line
+; Parameters: None
+; Returns: None
+; NOTE: Assumes that caller saves A,B regs
     SUBROUTINE
 _lcd_scroll_up:
+    PSHX
     LDD SCROLL_REG
     ADDD #80
     JSR _set_scroll_reg
@@ -170,8 +204,13 @@ _lcd_scroll_up:
     LDX #$160
     JSR _lcd_spaces
     JSR _restore_cursor_pos
+    PULX
     RTS
 
+; Function: _set_scroll_reg
+; Sets and stores the scroll register for LCD text layer
+; Parameters: D - scroll register value
+; Returns: None
     SUBROUTINE
 _set_scroll_reg:
     PSHA
@@ -185,6 +224,12 @@ _set_scroll_reg:
     STAA LCD10
     RTS
 
+; Function: _inc_cur_pos
+; Increments and stores the text layer cursor position, moving
+; to new line if necessary.
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A reg
     SUBROUTINE
 _inc_cur_pos:
     LDAA CURPOS_COL
@@ -198,7 +243,11 @@ _inc_cur_pos:
     STAA CURPOS_COL
     RTS
 
-; Params: X - number of spaces to output
+; Function: _lcd_spaces
+; Outputs a number of spaces to the LCD text layer
+; Parameters: X - number of spaces to output
+; Returns: None
+; NOTE: Assumes caller saves A reg
     SUBROUTINE
 _lcd_spaces:
     LDAA #$20
@@ -208,8 +257,15 @@ _lcd_spaces:
     BNE .loop
     RTS
 
+; Function: cls
+; Clears both the text and graphics layers
+; Parameters: None
+; Returns: None
     SUBROUTINE
 _cls:
+    PSHA
+    PSHB
+    PSHX
     LDD #0
     JSR _set_scroll_reg
     LDD #0
@@ -235,14 +291,18 @@ _cls:
 
     LDD #0
     JSR lcd_set_cursor_pos
+    PULX
+    PULB
+    PULA
     RTS
 
-
-; Params: A - row num
-;         B - col num
-; Return: D - cursor addr
+; Function: _calc_cursor_addr
+; Calculates the text layer cursor address given the row and col
+; Parameters: A - row num, B - col num
+; Returns: D - cursor addr
     SUBROUTINE
 _calc_cursor_addr:
+    PSHX
     PSHB
     LDAB #80
     MUL
@@ -251,16 +311,25 @@ _calc_cursor_addr:
     ABX
     XGDX
     ADDD SCROLL_REG
-
+    PULX
     RTS
 
-; Returns:  A - row num
-;           B - col num
+; Function: _get_cursor_pos
+; Get the current cursor position of the LCD text layer
+; We can't get this from the LCD module, so we store it whenever
+; we change it.
+; Parameters: None
+; Returns:  A - row num, B - col num
     SUBROUTINE
 _get_cursor_pos:
     LDD  CURPOS_RC
     RTS
 
+; Function: _restore_cursor_pos
+; Reset the text layer cursor so it matches what we have stored
+; Parameters: None
+; Returns: None
+; NOTE: Assumes that caller saves A,B regs
     SUBROUTINE
 _restore_cursor_pos:
     JSR _get_cursor_pos

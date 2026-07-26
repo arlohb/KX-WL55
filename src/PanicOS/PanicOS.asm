@@ -8,6 +8,7 @@
 
     INCLUDE "drivers/keyboard.asm"
     INCLUDE "drivers/lcd.asm"
+    INCLUDE "time/delay.asm"
 
 reset:
     LDS #$FF
@@ -21,7 +22,7 @@ reset:
 
     JSR lcd_init
 
-    JSR setup_keybuf
+    JSR keyb_init
 
     PSHB
     LDAA #0
@@ -30,7 +31,7 @@ reset:
     PULB
 
 loop:
-    JSR getch
+    JSR keyb_getch
     JSR lcd_putch
 
     LDX #10
@@ -156,36 +157,6 @@ buzz_loop:
     DEX
     BNE buzz_loop
     RTS
-
-; Param: X is num of ms
-delay_ms:
-    PSHX
-    LDX #436
-    JSR delay_x
-    PULX
-
-    DEX
-    BNE delay_ms
-    RTS
-
-; Param: X is num of 100 us
-delay_100_us:
-    PSHX
-    LDX #43
-    JSR delay_x
-    PULX
-
-    DEX
-    BNE delay_100_us
-    RTS
-
-; Param: X is num of loops
-; CPU clock is 1.75MHz (7MHz, internally divided by 4)
-; Delay is 5 + 4X cycles at 1.75MHz, so ~ 2.86 + 2.29X us
-delay_x:
-    DEX             ;   1 cycle
-    BNE delay_x     ;   3 cycles
-    RTS             ;   5 cycles
 
 stub_irq:
     RTI
