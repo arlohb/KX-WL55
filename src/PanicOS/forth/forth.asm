@@ -81,6 +81,10 @@
 ;  (positioned so that systems with 4k byte write-
 ;   protected segments can write protect FORTH)
 ;
+; Arlo Blythe, August 2026
+; Ported to DASM Assembler
+; Changed memory map and IO to run on Panasonic KX-WL55
+;
 ; addr		contents		pointer	init by
 ; ****	*******************************	*******	*******
 ; 7FFF						HI
@@ -153,104 +157,13 @@ MEMTOP	equ	$7BFF	;32K system absolute end of RAM with 1K spare
 ACIAC	equ	$FC18	;MultiComp ACIA control address
 ACIAD	equ	ACIAC+1	;MultiComp ACIA data address
 
-; RAM below - Manually delete from S-records file
-	org	$E0	;variables
-
-N	DS.B	10	;used as scratch by (FIND),ENCLOSE,CMOVE,EMIT,KEY,
-;                              SP@,SWAP,DOES>,COLD
-
-;	These locations are used by the TRACE routine :
-
-TRLIM	DS.B	1	;the count for tracing without user intervention
-TRACEM	DS.B	1	;non-zero = trace mode
-BRKPT	DS.B	2	;the breakpoint address at which
-;               	 the program will go into trace mode
-VECT	DS.B	2	;vector to machine code
-;               	 (only needed if the TRACE routine is resident)
-
-;	Registers used by the FORTH virtual machine:
-;	Starting at $OOFO:
-
-W	DS.B	2	;the instruction register points to 6800 code
-IP	DS.B	2	;the instruction pointer points to pointer to 6800 code
-RP	DS.B	2	;the return stack pointer
-UP	DS.B	2	;the pointer to base of current user's 'USER' table
-;           		 (altered during multi-tasking)
-
-;	This system is shown with one user, but additional users
-;	may be added by allocating additional user tables:
-;	UORIG2 DS.B 64 data table for user #2
-;
-;	Some of this stuff gets initialized during
-;	COLD STAA rt and WARM STAA rt:
-; 	[ names correspond to FORTH words of similar (no X) name ]
-
-	org	$100
-
-UORIG	DS.B	6	;3 reserved variables
-XSPZER	DS.B	2	;initial top of data stack for this user
-XRZERO	DS.B	2	;initial top of return stack
-XTIB	DS.B	2	;STAA rt of terminal input buffer
-XWIDTH	DS.B	2	;name field width
-XWARN	DS.B	2	;warning message mode (0 = no disc)
-XFENCE	DS.B	2	;fence for FORGET
-XDP	DS.B	2	;dictionary pointer
-XVOCL	DS.B	2	;vocabulary linking
-XBLK	DS.B	2	;disc block being accessed
-XIN	DS.B	2	;scan pointer into the block
-XOUT	DS.B	2	;cursor position
-XSCR	DS.B	2	;disc screen being accessed (O=terminal)
-XOFSET	DS.B	2	;disc sector offset for multi-disc
-XCONT	DS.B	2	;last word in primary search vocabulary
-XCURR	DS.B	2	;last word in extensible vocabulary
-XSTATE	DS.B	2	;flag for 'interpret' or 'COMPILE' modes
-XBASE	DS.B	2	;number base for I/O numeric conversion
-XDPL	DS.B	2	;DECIMAl point place
-XFLD	DS.B	2	
-XCSP	DS.B	2	;current stack position, for COMPILE checks
-XRNUM	DS.B	2	
-XHLD	DS.B	2	
-XDELAY	DS.B	2	;carriage return delay count
-XCOLUM	DS.B	2	;carriage width
-IOSTAT	DS.B	2	;last acia status from write/read
-	DS.B	2	;(4 spares!)
-	DS.B	2	
-	DS.B	2	
-	DS.B	2	
-
-;
-;   end of user table, STAA rt of common system variables
-;
-
-XUSE	DS.B	2
-XPREV	DS.B	2
-	DS.B	4	;(spares)
-
-;  These things, up through the lable 'REND', are overwritten
-;  at time of cold load and should have the same contents
-;  as shown here:
-
-	DC	$C5	;immediate
-	DC	"FORT"	;DC	4,FORTH
-	DC	$C8
-	DC.W	NOOP-7
-FORTH	DC.W	DODOES,DOVOC,$81A0,TASK-7
-	DC.W	0
-
-	DC	"(C) Forth Interest Group, 1979"
-
-	DC	$84
-	DC	"TAS"	;DC	3,TASK
-	DC	$CB
-	DC.W	FORTH-8
-TASK	DC.W	DOCOL,SEMIS
-
-REND	equ	*	;(first empty location in dictionary)
+; RAM was here in origin in source file, now in memory_map.asm
 
 ;    The FORTH program (address $1000 to $27FF) is written
 ;    so that it can be in a ROM, or write-protected if desired
 
-	org	$1000
+; This section was previously located at $1000,
+; now it's just wherever it's included
 
 ; ######>> screen 3 <<
 ;
@@ -2044,17 +1957,17 @@ EXPEC6	DC.W	EMIT,XLOOP
 ;
 ; ======>>  129  <<
 	DC	$85
-	DC	"QUER"	;DC	4,QUERY
+	DC	"QUER"	;DC	4,FQUERY
 	DC	$D9
 	DC.W	EXPECT-9
-QUERY	DC.W	DOCOL,TIB,AT,COLUMS
+FQUERY	DC.W	DOCOL,TIB,AT,COLUMS
 	DC.W	AT,EXPECT,ZERO,IN,STORE
 	DC.W	SEMIS
 ;
 ; ======>>  130  <<
 	DC	$C1	;immediate	< carriage return >
 	DC	$80
-	DC.W	QUERY-8
+	DC.W	FQUERY-8
 NULL	DC.W	DOCOL,BLK,AT,ZBRAN
 	DC.W	NULL2-*
 	DC.W	ONE,BLK,PSTORE
@@ -2356,7 +2269,7 @@ QUIT	DC.W	DOCOL,ZERO,BLK,STORE
 ;  which gets a line of input, does it, prints " OK"
 ;  then repeats :
 ;
-QUIT2	DC.W	RPSTOR,CR,QUERY,INTERP,STATE,AT,ZEQU
+QUIT2	DC.W	RPSTOR,CR,FQUERY,INTERP,STATE,AT,ZEQU
 	DC.W	ZBRAN
 	DC.W	QUIT3-*
 	DC.W	PDOTQ

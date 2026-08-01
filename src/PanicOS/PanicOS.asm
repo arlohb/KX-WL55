@@ -11,6 +11,7 @@
     INCLUDE "time/delay.asm"
 
     INCLUDE "applications/mikbug.asm"
+    INCLUDE "forth/forth.asm"
 
 reset:
     LDS #$FF

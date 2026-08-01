@@ -43,6 +43,99 @@ KEYMATRIX: ds.b 1
 LCD00: ds.b 16
 LCD10: ds.b 16
 
+    SEG.U EXT_RAM
+    ORG $2000
+
+N	DS.B	10	;used as scratch by (FIND),ENCLOSE,CMOVE,EMIT,KEY,
+;                              SP@,SWAP,DOES>,COLD
+
+;	These locations are used by the TRACE routine :
+
+TRLIM	DS.B	1	;the count for tracing without user intervention
+TRACEM	DS.B	1	;non-zero = trace mode
+BRKPT	DS.B	2	;the breakpoint address at which
+;               	 the program will go into trace mode
+VECT	DS.B	2	;vector to machine code
+;               	 (only needed if the TRACE routine is resident)
+
+;	Registers used by the FORTH virtual machine:
+;	Starting at $OOFO:
+
+W	DS.B	2	;the instruction register points to 6800 code
+IP	DS.B	2	;the instruction pointer points to pointer to 6800 code
+RP	DS.B	2	;the return stack pointer
+UP	DS.B	2	;the pointer to base of current user's 'USER' table
+;           		 (altered during multi-tasking)
+
+;	This system is shown with one user, but additional users
+;	may be added by allocating additional user tables:
+;	UORIG2 DS.B 64 data table for user #2
+;
+;	Some of this stuff gets initialized during
+;	COLD STAA rt and WARM STAA rt:
+; 	[ names correspond to FORTH words of similar (no X) name ]
+
+UORIG	DS.B	6	;3 reserved variables
+XSPZER	DS.B	2	;initial top of data stack for this user
+XRZERO	DS.B	2	;initial top of return stack
+XTIB	DS.B	2	;STAA rt of terminal input buffer
+XWIDTH	DS.B	2	;name field width
+XWARN	DS.B	2	;warning message mode (0 = no disc)
+XFENCE	DS.B	2	;fence for FORGET
+XDP	DS.B	2	;dictionary pointer
+XVOCL	DS.B	2	;vocabulary linking
+XBLK	DS.B	2	;disc block being accessed
+XIN	DS.B	2	;scan pointer into the block
+XOUT	DS.B	2	;cursor position
+XSCR	DS.B	2	;disc screen being accessed (O=terminal)
+XOFSET	DS.B	2	;disc sector offset for multi-disc
+XCONT	DS.B	2	;last word in primary search vocabulary
+XCURR	DS.B	2	;last word in extensible vocabulary
+XSTATE	DS.B	2	;flag for 'interpret' or 'COMPILE' modes
+XBASE	DS.B	2	;number base for I/O numeric conversion
+XDPL	DS.B	2	;DECIMAl point place
+XFLD	DS.B	2	
+XCSP	DS.B	2	;current stack position, for COMPILE checks
+XRNUM	DS.B	2	
+XHLD	DS.B	2	
+XDELAY	DS.B	2	;carriage return delay count
+XCOLUM	DS.B	2	;carriage width
+IOSTAT	DS.B	2	;last acia status from write/read
+	DS.B	2	;(4 spares!)
+	DS.B	2	
+	DS.B	2	
+	DS.B	2	
+
+;
+;   end of user table, STAA rt of common system variables
+;
+
+XUSE	DS.B	2
+XPREV	DS.B	2
+	DS.B	4	;(spares)
+
+;  These things, up through the lable 'REND', are overwritten
+;  at time of cold load and should have the same contents
+;  as shown here:
+
+	DC	$C5	;immediate
+	DC	"FORT"	;DC	4,FORTH
+	DC	$C8
+	DC.W	NOOP-7
+FORTH	DC.W	DODOES,DOVOC,$81A0,TASK-7
+	DC.W	0
+
+	DC	"(C) Forth Interest Group, 1979"
+
+	DC	$84
+	DC	"TAS"	;DC	3,TASK
+	DC	$CB
+	DC.W	FORTH-8
+TASK	DC.W	DOCOL,SEMIS
+
+REND	equ	*	;(first empty location in dictionary)
+
+
     SEG TEXT
     ORG $0
     ds.b 1,$ff
