@@ -123,3 +123,27 @@
 - [panasonic_typewriter_interface](https://github.com/xunker/panasonic_typewriter_interface)
 - [emulator](https://pypi.org/project/m68hc11/)
 
+## Forth
+
+### Documentation
+
+- [Systems Guide to figForth 3rd Edition](https://figforth.org.uk/library/Systems.Guide.to.figForth.pdf)
+- [6800 Forth Reference Manual](https://sphere.computer/resources/software/languages/forth/6800.001_6800_FORTH.pdf)
+- [douggilliland's Directory of FORTH for the 6800](https://github.com/douggilliland/Retro-Computers/wiki/6800-Software-Development#forth-for-the-6800)
+
+### Software
+
+- [fig-FORTH 6800 asm source listing pdf](https://www.forth.org/fig-forth/fig-forth_6800.pdf)
+    - Designed for the SSB Mneumonic assembler
+- [asm68c](https://sourceforge.net/projects/asm68c/)
+    - This is an assembler and also contains fig-forth
+    - Contains the transcribed source from the pdf as well as other stuff
+- [corshamtech's fig-FORTH source code](https://web.archive.org/web/20190726043734/http://www.corshamtech.com/wp-content/uploads/2018/07/fig-FORTH_6800.zip)
+    - Based of transcribed source from pdf
+    - Modified to assemble on the AS02 6800 cross-assembler
+    - Modified to run on Corsham Technologies 6800 system (an SWTPC replica)
+- [douggilliland's fig-FORTH source code](https://github.com/douggilliland/Retro-Computers/tree/master/6800/fig-FORTH)
+    - Based of corshamtech's modifications
+    - More changes on top of that
+    - Some useful Forth books here too
+
