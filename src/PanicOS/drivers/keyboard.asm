@@ -11,16 +11,49 @@
 ; | 8   | 7 | 5 | E         | =     | <-- | W     | -->         | Q    |
 ; | 9   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
 
+;Special keycodes
+;$80 - invalid key
+;$81 - shift (but we don't use this to recognise if we're shifted)
 KEYCHARS:
-    BYTE 'M,'_,'_,' ,'_,'_,'_,$C
-    BYTE '_,'B,'_,'_,'_,'_,'_,'_
-    BYTE 'N,'V,'_,',,'.,'_,'/,'_
-    BYTE 'J,'G,'_,$D,'_,'_,'@,'_
-    BYTE 'H,'F,'_,'K,'L,'_,';,'1
-    BYTE 'U,'T,'C,'_,'_,'X,'[,'Z
-    BYTE 'Y,'R,'D,'I,'O,'S,'P,'A
-    BYTE '7,'5,'E,'=,'_,'W,'_,'Q
-    BYTE '6,'4,'3,'8,'9,'2,'0,'_
+    BYTE  'M,$80,$80, ' ,$81,$80,$80,$0C
+    BYTE  '-, 'B,$80,$80,$80,$80,$80,$80
+    BYTE  'N, 'V,$80, ',, '.,$80, '/,$80
+    BYTE  'J, 'G,$80,$0D,$80,$80, '@,$81
+    BYTE  'H, 'F,$80, 'K, 'L,$80, ';, '1
+    BYTE  'U, 'T, 'C,$80,$80, 'X, '], 'Z
+    BYTE  'Y, 'R, 'D, 'I, 'O, 'S, 'P, 'A
+    BYTE  '7, '5, 'E, '=,$80, 'W,$80, 'Q
+    BYTE  '6, '4, '3, '8, '9, '2, '0,$80
+
+;Shifted
+KEYCHARS_S:
+    BYTE  'm,$80,$80, ' ,$81,$80,$80,$0C
+    BYTE  '#, 'b,$80,$80,$80,$80,$80,$80
+    BYTE  'n, 'v,$80, '<, '>,$80, '?,$80
+    BYTE  'j, 'g,$80,$0D,$80,$80, '%,$81
+    BYTE  'h, 'f,$80, 'k, 'l,$80, ':, '!
+    BYTE  'u, 't, 'c,$80,$80, 'x, '[, 'z
+    BYTE  'y, 'r, 'd, 'i, 'o, 's, 'p, 'a
+    BYTE  '&, '^, 'e, '+,$80, 'w,$80, 'q
+    BYTE  '_, '$, '*, '', '(, '", '),$80
+
+; Function: _shifted
+; We're shifted if bit 3 of row 0 is pressed, or bit 0 or row 3
+; Returns: Z flag not set if we're shifted (so BNE after for shifted)
+_shifted:
+    PSHA
+    PSHB
+    LDAA KEYBUF_NEXT
+    COMA
+    ANDA #$08
+    LDAB KEYBUF_NEXT+3
+    COMB
+    ANDB #$01
+    ABA
+    PULB
+    PULA
+    RTS
+
 
 ; Function: keyb_getch
 ; Loop until a key is released, return the ASCII value
@@ -81,9 +114,21 @@ keyb_getch:
     ABA
     TAB
 
+    JSR _shifted
+    BNE .shifted
     LDX #KEYCHARS
+    BRA .cont
+.shifted
+    LDX #KEYCHARS_S
+.cont
     ABX
     LDAA 0,X
+
+    ; Invalid or control key
+    PSHA
+    ANDA #$80
+    PULA
+    BNE .loop
 
     PULX
     PULB
