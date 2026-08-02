@@ -145,16 +145,35 @@ mikbug_swi
         DEC    5,X
         DEC    6,X
 
+; PRINT STACK FIELD NAME
+OUTFNAM JSR    OUTCH
+        LDAA   #':
+        JMP    OUTCH
+
 ; PRINT CONTENTS OF STACK
-PRINT   LDX    SP
+PRINT   PSHA
+        LDX    SP
         INX
+        LDAA   #'C
+        BSR    OUTFNAM
         BSR    OUT2HS    ;CONDITION CODES
+        LDAA   #'B
+        BSR    OUTFNAM
         BSR    OUT2HS    ;ACC-B
+        LDAA   #'A
+        BSR    OUTFNAM
         BSR    OUT2HS    ;ACC-A
+        LDAA   #'X
+        BSR    OUTFNAM
         BSR    OUT4HS    ;X-REG
+        LDAA   #'P
+        BSR    OUTFNAM
         BSR    OUT4HS    ;P-COUNTER
+        LDAA   #'S
+        BSR    OUTFNAM
         LDX    #SP
         BSR    OUT4HS    ;STACK POINTER
+        PULA
 C2      BRA    CONTRL
 
 MCLOFF
