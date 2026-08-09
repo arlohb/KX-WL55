@@ -336,3 +336,28 @@ _restore_cursor_pos:
     JSR lcd_set_cursor_pos
     RTS
 
+; Function: lcd_print
+; Print a null-terminated string to the screen
+; Parameters: X - string addr
+; Returns: None
+    SUBROUTINE
+lcd_print:
+    LDAA 0,X
+    BEQ .end
+    JSR lcd_putch
+    INX
+    JMP lcd_print
+.end
+    RTS
+
+; Function: lcd_println
+; Print a null-terminated string to the screen with a newline
+; Parameters: X - string addr
+; Returns: None
+    SUBROUTINE
+lcd_println:
+    JSR lcd_print
+    LDAA #13
+    JSR lcd_putch
+    RTS
+

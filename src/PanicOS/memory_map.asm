@@ -28,6 +28,18 @@ XLOW    ds.b    1         ;XREG LOW
 STACK   ds.b    1         ;STACK POINTER
 
 
+;	Registers used by the FORTH virtual machine:
+;	Starting at $OOFO:
+
+W	DS.B	2	;the instruction register points to 6800 code
+IP	DS.B	2	;the instruction pointer points to pointer to 6800 code
+RP	DS.B	2	;the return stack pointer
+UP	DS.B	2	;the pointer to base of current user's 'USER' table
+;           		 (altered during multi-tasking)
+
+N	DS.B	10	;used as scratch by (FIND),ENCLOSE,CMOVE,EMIT,KEY,
+;                              SP@,SWAP,DOES>,COLD
+
 ;       OPT    MEMORY
         ORG    $E000
     SEG.U KEYSCAN
@@ -46,9 +58,6 @@ LCD10: ds.b 16
     SEG.U EXT_RAM
     ORG $2000
 
-N	DS.B	10	;used as scratch by (FIND),ENCLOSE,CMOVE,EMIT,KEY,
-;                              SP@,SWAP,DOES>,COLD
-
 ;	These locations are used by the TRACE routine :
 
 TRLIM	DS.B	1	;the count for tracing without user intervention
@@ -58,14 +67,6 @@ BRKPT	DS.B	2	;the breakpoint address at which
 VECT	DS.B	2	;vector to machine code
 ;               	 (only needed if the TRACE routine is resident)
 
-;	Registers used by the FORTH virtual machine:
-;	Starting at $OOFO:
-
-W	DS.B	2	;the instruction register points to 6800 code
-IP	DS.B	2	;the instruction pointer points to pointer to 6800 code
-RP	DS.B	2	;the return stack pointer
-UP	DS.B	2	;the pointer to base of current user's 'USER' table
-;           		 (altered during multi-tasking)
 
 ;	This system is shown with one user, but additional users
 ;	may be added by allocating additional user tables:
@@ -134,6 +135,8 @@ FORTH	DC.W	DODOES,DOVOC,$81A0,TASK-7
 TASK	DC.W	DOCOL,SEMIS
 
 REND	equ	*	;(first empty location in dictionary)
+
+RAMEND  equ $2FFF
 
 
     SEG TEXT

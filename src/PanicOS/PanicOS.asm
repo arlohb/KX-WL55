@@ -13,6 +13,11 @@
     INCLUDE "applications/mikbug.asm"
     INCLUDE "forth/forth.asm"
 
+START_MENU
+    DC #13
+    DC  "        (F) Forth        (M) Mikbug        (D) Display Loop"
+    DC 0
+
 reset:
     LDS #$FF
 
@@ -33,16 +38,35 @@ reset:
     JSR lcd_set_cursor_pos
     PULB
 
+    LDX #START_MENU
+    JSR lcd_println
+
+menu_loop:
+    JSR keyb_getch
+
+    CMPA #70 ; F
+    BEQ menu_forth
+    CMPA #77 ; M
+    BEQ menu_mikbug
+    CMPA #68 ; D
+    BEQ display_loop
+
+    BRA menu_loop
+
+menu_mikbug:
     JMP mikbug_start
 
-loop:
+menu_forth:
+    JMP ORIG
+
+display_loop:
     JSR keyb_getch
     JSR lcd_putch
 
     LDX #10
     JSR delay_ms
 
-    JMP loop
+    JMP display_loop
 
 ; Params: A - prints lower 4 bits as hex char
 put_hex_nibble:

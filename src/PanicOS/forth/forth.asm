@@ -185,9 +185,9 @@ ORIG	nop
 	DC.W	0	;topmost word in FORTH vocabulary
 BACKSP	DC.W	$7F	;backspace character for editing
 UPINIT	DC.W	UORIG	;initial user area
-SINIT	DC.W	ORIG-$D0	;initial top of data stack
-RINIT	DC.W	ORIG-2	;initial top of return stack
-	DC.W	ORIG-$D0	;terminal input buffer
+SINIT	DC.W	RAMEND-$D0	;initial top of data stack
+RINIT	DC.W	RAMEND-2	;initial top of return stack
+	DC.W	RAMEND-$D0	;terminal input buffer
 	DC.W	31	;initial name field width
 	DC.W	0	;initial warning mode (0 = no disc)
 FENCIN	DC.W	REND	;initial fence
@@ -805,7 +805,7 @@ SPSTOR	DC.W	*+2
 	DC	$A1
 	DC.W	SPSTOR-6
 RPSTOR	DC.W	*+2
-	ldx	RINIT	;initialize from rom conSTAA nt
+	ldx	RINIT	;initialize from rom constant
 	stx	RP
 	jmp	NEXT
 ;
@@ -2612,60 +2612,24 @@ ARROW	DC.W	DOCOL,QLOAD,ZERO,IN,STORE,BSCR
 ;
 ;
 ; ======>>  182  << code for EMIT
-PEMIT	STAB	N	;save B
-	stx	N+1	;save X
-	LDAB	ACIAC
-	bitb	#2	;check ready bit
-	beq	PEMIT+4	;if not ready for more data
-	STAA 	ACIAD
-	ldx	UP
-	STAB	IOSTAT-UORIG,x
-	LDAB	N	;recover B & X
-	ldx	N+1
-	rts		;only A register may change
+PEMIT	JSR	lcd_putch
+	RTS		;only A register may change
 
 ; ======>>  183  << code for KEY
-PKEY	STAB	N
-	stx	N+1
-	LDAB	ACIAC
-	asrb
-	bcc	PKEY+4	;no incoming data yet
-	LDAA ACIAD
-	anda	#$7F	;strip parity bit
-	ldx	UP
-	STAB	IOSTAT+1-UORIG,x
-	LDAB	N
-	ldx	N+1
-	rts
+PKEY	JSR	keyb_getch
+	RTS
 	
-;PKEY	jmp	$E1AC	;for MIKBUG
-;  PKEY	DC	$3F,$14,$39	;for PROTO
-;  PKEY	jmp	$D289 ;for Smoke Signal DOS
 ;
 ; ######>> screen 64 <<
 ; ======>>  184  << code for ?TERMINAL
-PQTER	LDAA ACIAC	;Test for 'break'  condition
-	anda	#$11	;mask framing ERROR bit and
-;			 input buffer full
-	beq	PQTER2
-	LDAA ACIAD	;clear input buffer
-	LDAA #01
+PQTER
 PQTER2	rts
 ;
 ; ======>>  185  << code for CR
 PCR	LDAA #$D	;carriage return
 	bsr	PEMIT
 	LDAA #$A	;line feed
-	bsr	PEMIT
-	LDAA #$7F	;rubout
-	ldx	UP
-	LDAB	XDELAY+1-UORIG,x
-PCR2	decb
-	bmi	PQTER2	;return if minus
-	pshb		;save counter
-	bsr	PEMIT	;print RUBOUTs to delay.....
-	pulb
-	bra	PCR2	;repeat
+	bra	PEMIT
 ;
 ; ######>> screen 66 <<
 ; ======>>  187  <<
