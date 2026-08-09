@@ -107,12 +107,44 @@ lcd_putch:
     BEQ _new_line
     CMPA #$C
     BEQ .cls
+    CMPA #$7F
+    BEQ _backspace
+    CMPA #$08
+    BEQ .backspace
+    CMPA #31
+    BLE .unknown
     ; printable character
     STAA LCD00
     JSR _inc_cur_pos
     RTS
 .cls
     JMP _cls
+.backspace
+    PSHB
+    JSR _backspace
+    PULB
+    RTS
+.unknown
+    RTS
+
+; Function _backspace
+; Moves the cursor back one and clears the character there
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A and B regs
+    SUBROUTINE
+_backspace:
+    ; Load cursor pos
+    LDAA CURPOS_COL
+    ; End if already at start
+    BEQ .end
+    ; Decrement
+    JSR _dec_cur_pos
+    ; Send to display
+    LDD CURPOS_RC
+    JSR lcd_set_cursor_pos
+.end
+    RTS
 
     SUBROUTINE
 _new_line:
@@ -275,6 +307,21 @@ _inc_cur_pos:
     CLRA
 .done
     STAA CURPOS_COL
+    RTS
+
+; Function: _dec_cur_pos
+; Decrements and stores the text layer cursor position,
+; clamping at the start of a line
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A reg
+    SUBROUTINE
+_dec_cur_pos:
+    LDAA CURPOS_COL
+    DECA
+    BMI .clamp
+    STAA CURPOS_COL
+.clamp
     RTS
 
 ; Function: _lcd_spaces
