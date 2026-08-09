@@ -110,6 +110,8 @@ lcd_putch:
     BEQ _backspace
     CMPA #$08
     BEQ .backspace
+    CMPA #$07
+    BEQ .bell
     CMPA #31
     BLE .unknown
     ; printable character
@@ -122,6 +124,12 @@ lcd_putch:
     PSHB
     JSR _backspace
     PULB
+    RTS
+.bell
+    PSHX
+    LDX #20
+    JSR buzz
+    PULX
     RTS
 .unknown
     RTS

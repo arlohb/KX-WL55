@@ -8,6 +8,7 @@
 
     INCLUDE "drivers/keyboard.asm"
     INCLUDE "drivers/lcd.asm"
+    INCLUDE "drivers/buzzer.asm"
     INCLUDE "time/delay.asm"
 
     INCLUDE "applications/mikbug.asm"
@@ -157,34 +158,6 @@ print_keybuf:
     CPX #9
     BNE .print_keybuf_loop
 
-    RTS
-
-; Param: X is num of loops
-; Takes ~1ms per loop,
-; making this ~1000Hz, but actually it is lower as not all instructions are counted
-buzz_loop:
-    ; Buzzer on
-    LDAA #$40
-    STAA PORT2
-
-    ; Delay
-    PSHX
-    LDX #5
-    JSR delay_100_us
-    PULX
-
-    ; Buzzer off
-    LDAA #$00
-    STAA PORT2
-
-    ; Delay
-    PSHX
-    LDX #5
-    JSR delay_100_us
-    PULX
-
-    DEX
-    BNE buzz_loop
     RTS
 
 stub_irq:
