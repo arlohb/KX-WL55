@@ -1,3 +1,27 @@
+; Driver for SED1330 LCD dot-matrix display controller
+
+; Screen characteristics
+SCREEN_PIXELS_X = 480
+SCREEN_PIXELS_Y = 128
+CHAR_PIXELS_X = 6  ; 5x7 font, one horiz pixel spacing
+CHAR_PIXELS_Y = 8 ; 5x7 font, one vert pixel spacing
+SCREEN_TEXT_COLS = SCREEN_PIXELS_X/CHAR_PIXELS_X
+SCREEN_TEXT_ROWS = SCREEN_PIXELS_Y/CHAR_PIXELS_Y
+
+; LCD controller commands
+LCD_SYSTEM_SET  = $40
+LCD_SLEEP_IN    = $53
+LCD_DISP_ON     = $59
+LCD_DISP_OFF    = $58
+LCD_SCROLL      = $44
+LCD_CSRFORM     = $5D
+LCD_CGRAM_ADR   = $5C
+LCD_CSRDIR_RIGHT= $4C
+LCD_HDOT_SCR    = $5A
+LCD_OVLAY       = $5B
+LCD_CSRW        = $46
+LCD_MWRITE      = $42
+
 ; Function: lcd_init
 ; Initialised the LCD hardware module
 ; Parameters: None
@@ -5,102 +29,71 @@
     SUBROUTINE
 lcd_init:
     PSHA
-    LDAA #$40
+    PSHB
+    LDAA #LCD_SYSTEM_SET
     STAA LCD10
-    ; LDAA #$15
-    LDAA #$14   ; internal CG ROM
+    LDAA #$14   ; DR=0, T/L=0, IV=0, W/S=0, M2=1, M1=0,
+                ; M0=0 (Internal CG ROM)
     STAA LCD00
-    LDAA #$85
+    LDAA #$80+(CHAR_PIXELS_X-1)  ; WF=1, FX=5 (Char field width 6)
     STAA LCD00
-    LDAA #$08
+    LDAA #(CHAR_PIXELS_Y-1)      ; FY=7 (Char field height 8)
     STAA LCD00
-    LDAA #$4F
+    LDAA #(SCREEN_TEXT_COLS-1)   ; C/R (80 character bytes per line)
     STAA LCD00
-    LDAA #$59
+    LDAA #$59                    ; TC/R (line length incl. blanking)
     STAA LCD00
-    LDAA #$81
+    LDAA #(SCREEN_PIXELS_Y-1)    ; L/F (128 pixel lines per frame)
     STAA LCD00
-    LDAA #$50
+    LDAA #(SCREEN_TEXT_COLS)     ; APL (Horizontal address range: 80 addresses per line)
     STAA LCD00
+    LDAA #$00                    ; APH
+    STAA LCD00
+
+    LDAA #LCD_CGRAM_ADR   ; (not sure we're using currently)
+    STAA LCD10
     LDAA #$00
     STAA LCD00
-
-    LDAA #$5C
-    STAA LCD10
-    LDAA #$00
-    STAA LCD00
-    LDAA #$F0
+    LDAA #$F0   ; Reserve $F000 upwards
     STAA LCD00
 
-    LDAA #$44   ; SCROLL
-    STAA LCD10
-    LDAA #$00   ; SAD1L
-    STAA LCD00
-    LDAA #$00   ; SAD1H
-    STAA LCD00
-    LDAA #$80   ; SL1
-    STAA LCD00
-    LDAA #$00   ; SAD2L
-    STAA LCD00
-    LDAA #$10   ; SAD2H
-    STAA LCD00
-    LDAA #$80   ; SL2
-    STAA LCD00
+    JSR _lcd_scroll_init
 
-    LDAA #$5A
+    LDAA #LCD_HDOT_SCR
     STAA LCD10
     LDAA #$00
     STAA LCD00
 
-    LDAA #$5B   ; OVLAY
+    LDAA #LCD_OVLAY
     STAA LCD10
     ; LDAA #$01
-    LDAA #$03   ; Prioritised-OR overlay
+    LDAA #$03   ; OV=0 two-layer composition, DM2=0: screen block 3 is text, DM1=0: screen block 1 is text, MX10=3 Prioritised-OR overlay
     STAA LCD00
 
-    LDAA #$58
+    LDAA #LCD_DISP_OFF
     STAA LCD10
-    LDAA #$16
+    LDAA #$56   ; FP54=1 - screen block 3 on, FP32=1 - screen block 2 on, FP10=1 - screen block 1 on, FC10=0b10 - flash cursor at ~2Hz
     STAA LCD00
 
-    LDAA #$46
+    LDAA #LCD_CSRFORM
     STAA LCD10
-    LDAA #$00
+    LDAA #$05   ; CRX: width 6 pixels
     STAA LCD00
-    LDAA #$00
-    STAA LCD00
-
-    LDAA #$5D
-    STAA LCD10
-    LDAA #$05
-    STAA LCD00
-    LDAA #$87
+    LDAA #$06   ; CM=0 line cursor, CRY=6: at 7th line from top (level with bottom of char)
     STAA LCD00
 
-    LDAA #$4C
+    LDAA #LCD_CSRDIR_RIGHT
     STAA LCD10
 
-    LDAA #$59
+    LDAA #LCD_DISP_ON
     STAA LCD10
 
-    LDAA #$46
-    STAA LCD10
-    LDAA #$00
-    STAA LCD00
-    LDAA #$00
-    STAA LCD00
-
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     JSR _cls
-    LDAA #$46
-    STAA LCD10
-    LDAA #$00
-    STAA LCD00
-    LDAA #$00
-    STAA LCD00
-    LDAA #$42
-    STAA LCD10
+    LDD  #0
+    JSR lcd_set_cursor_pos
+    PULB
     PULA
     RTS
 
@@ -125,7 +118,7 @@ lcd_putch:
 _new_line:
     PSHB
     JSR _get_cursor_pos
-    CMPA #13
+    CMPA #(SCREEN_TEXT_ROWS-1)
     BLT .no_scroll
     JSR _lcd_scroll_up
     BRA .done
@@ -148,14 +141,14 @@ lcd_set_cursor_pos:
     JSR _calc_cursor_addr
 
     PSHA
-    LDAA #$46
+    LDAA #LCD_CSRW
     STAA LCD10
     PULA
 
     STAB LCD00
     STAA LCD00
 
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     RTS
 
@@ -166,9 +159,9 @@ lcd_set_cursor_pos:
     SUBROUTINE
 lcd_enable:
     PSHA
-    LDAA #$59
+    LDAA #LCD_DISP_ON
     STAA LCD10
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     PULA
     RTS
@@ -180,9 +173,9 @@ lcd_enable:
     SUBROUTINE
 lcd_disable:
     PSHA
-    LDAA #$58
+    LDAA #LCD_DISP_OFF
     STAA LCD10
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     PULA
     RTS
@@ -195,32 +188,73 @@ lcd_disable:
     SUBROUTINE
 _lcd_scroll_up:
     PSHX
-    LDD SCROLL_REG
-    ADDD #80
-    JSR _set_scroll_reg
+    INC SCROLL_LINES
+    LDAA SCROLL_LINES
+    CMPA #SCREEN_TEXT_ROWS
+    BLT .no_reset
+    JSR _lcd_scroll_init
+    BRA .reset_done
+.no_reset
+    JSR _set_scroll_regs
+.reset_done
     JSR _get_cursor_pos
     CLRB
     JSR lcd_set_cursor_pos
-    LDX #$160
+    LDX #SCREEN_TEXT_COLS
     JSR _lcd_spaces
     JSR _restore_cursor_pos
     PULX
     RTS
 
-; Function: _set_scroll_reg
+; Function: _lcd_scroll_init
+; Set initial values for screen scroll addresses
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A
+    SUBROUTINE
+_lcd_scroll_init:
+    LDAA #0
+    STAA SCROLL_LINES
+    LDAA #LCD_SCROLL
+    STAA LCD10
+    LDAA #$00   ; SAD1L
+    STAA LCD00
+    LDAA #$00   ; SAD1H
+    STAA LCD00
+    LDAA #(SCREEN_PIXELS_Y-1)   ; SL1
+    STAA LCD00
+    LDAA #$00   ; SAD2L
+    STAA LCD00
+    LDAA #$10   ; SAD2H
+    STAA LCD00
+    LDAA #(SCREEN_PIXELS_Y-1)   ; SL2
+    STAA LCD00
+    LDAA #$00   ; SAD3L
+    STAA LCD00
+    LDAA #$00   ; SAD3H
+    STAA LCD00
+    RTS
+
+; Function: _set_scroll_regs
 ; Sets and stores the scroll register for LCD text layer
-; Parameters: D - scroll register value
+; Parameters: A - scroll lines value, 0 if not scrolled, +1 for each line, up to 13
 ; Returns: None
     SUBROUTINE
-_set_scroll_reg:
-    PSHA
-    LDAA #$44
+_set_scroll_regs:
+    STAA SCROLL_LINES
+    LDAA #LCD_SCROLL
     STAA LCD10
-    PULA
-    STD SCROLL_REG
+    LDAA SCROLL_LINES
+    LDAB #(SCREEN_TEXT_COLS)
+    MUL
+    STAB LCD00  ;SAD1L
+    STAA LCD00  ;SAD1H
+    LDAA #(SCREEN_TEXT_ROWS)
+    SUBA SCROLL_LINES
+    LDAB #(CHAR_PIXELS_Y)
+    MUL
     STAB LCD00
-    STAA LCD00
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     RTS
 
@@ -234,7 +268,7 @@ _set_scroll_reg:
 _inc_cur_pos:
     LDAA CURPOS_COL
     INCA
-    CMPA #80
+    CMPA #SCREEN_TEXT_COLS
     BLT .done
     ; new line
     INC CURPOS_ROW
@@ -266,21 +300,20 @@ _cls:
     PSHA
     PSHB
     PSHX
-    LDD #0
-    JSR _set_scroll_reg
+    JSR _lcd_scroll_init
     LDD #0
     JSR lcd_set_cursor_pos
-    LDX #1200       ;15 lines * 80 chars per line
+    LDX #(SCREEN_TEXT_COLS*SCREEN_TEXT_ROWS)
     JSR _lcd_spaces
 
-    LDAA #$46
+    LDAA #LCD_CSRW  ; Graphics at address $1000
     STAA LCD10
     LDAA #0
     STAA LCD00
     LDAA #$10
     STAA LCD00
 
-    LDAA #$42
+    LDAA #LCD_MWRITE
     STAA LCD10
     LDAA #$00
     LDX #10480       ;131 lines * 80 bytes per line
@@ -304,13 +337,17 @@ _cls:
 _calc_cursor_addr:
     PSHX
     PSHB
+    ADDA SCROLL_LINES
+    CMPA #16
+    BLT .not_scrolled
+    SUBA #16
+.not_scrolled
     LDAB #80
     MUL
     XGDX
     PULB
     ABX
     XGDX
-    ADDD SCROLL_REG
     PULX
     RTS
 

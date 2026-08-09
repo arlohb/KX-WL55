@@ -14,7 +14,7 @@ CURPOS_RC:
 CURPOS_ROW:  ds.b 1
 CURPOS_COL:  ds.b 1
 
-SCROLL_REG: ds.w 1
+SCROLL_LINES: ds.b 1
 
 SCRATCH: ds.b 1
 
