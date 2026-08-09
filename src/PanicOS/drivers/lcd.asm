@@ -342,12 +342,15 @@ _restore_cursor_pos:
 ; Returns: None
     SUBROUTINE
 lcd_print:
+    PSHA
+.print
     LDAA 0,X
     BEQ .end
     JSR lcd_putch
     INX
-    JMP lcd_print
+    JMP .print
 .end
+    PULA
     RTS
 
 ; Function: lcd_println
@@ -356,8 +359,10 @@ lcd_print:
 ; Returns: None
     SUBROUTINE
 lcd_println:
+    PSHA
     JSR lcd_print
     LDAA #13
     JSR lcd_putch
+    PULA
     RTS
 
