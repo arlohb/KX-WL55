@@ -66,7 +66,6 @@ lcd_init:
 
     LDAA #LCD_OVLAY
     STAA LCD10
-    ; LDAA #$01
     LDAA #$03   ; OV=0 two-layer composition, DM2=0: screen block 3 is text, DM1=0: screen block 1 is text, MX10=3 Prioritised-OR overlay
     STAA LCD00
 
@@ -77,9 +76,9 @@ lcd_init:
 
     LDAA #LCD_CSRFORM
     STAA LCD10
-    LDAA #$05   ; CRX: width 6 pixels
+    LDAA #(CHAR_PIXELS_X-1)         ; CRX: full char width
     STAA LCD00
-    LDAA #$06   ; CM=0 line cursor, CRY=6: at 7th line from top (level with bottom of char)
+    LDAA #$80+(CHAR_PIXELS_Y-1)     ; CM=1 block cursor, CRY: full char height
     STAA LCD00
 
     LDAA #LCD_CSRDIR_RIGHT
