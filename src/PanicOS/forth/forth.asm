@@ -2618,11 +2618,14 @@ PEMIT	JSR	lcd_putch
 ; ======>>  183  << code for KEY
 PKEY	JSR	keyb_getch
 	RTS
-	
+
 ;
 ; ######>> screen 64 <<
 ; ======>>  184  << code for ?TERMINAL
-PQTER
+; We'll just use this to pause output while SHIFT is held.
+PQTER   JSR lcd_shifted
+        BNE PQTER
+        LDAA #0 ;don't break
 PQTER2	rts
 ;
 ; ======>>  185  << code for CR
@@ -2953,7 +2956,7 @@ LIST	DC.W	DOCOL,DEC,CR,DUP,SCR,STORE,PDOTQ
 	DC.W	DOT,CLITER
 	DC	$10
 	DC.W	ZERO,XDO
-LIST2	DC.W	CR,I,THREE
+LIST2	DC.W	CR,I,THREE,QTERM,DROP
 	DC.W	DOTR,SPACE,I,SCR,AT,DLINE,XLOOP
 	DC.W	LIST2-*
 	DC.W	CR

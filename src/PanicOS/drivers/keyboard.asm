@@ -37,9 +37,15 @@ KEYCHARS_S:
     BYTE  '&, '^, 'e, '+,$80, 'w,$80, 'q
     BYTE  '_, '$, '*, '', '(, '", '),$80
 
-; Function: _shifted
+; Function: lcd_shifted
 ; We're shifted if bit 3 of row 0 is pressed, or bit 0 or row 3
 ; Returns: Z flag not set if we're shifted (so BNE after for shifted)
+;
+; Internal _shifted version doesn't update keybuf, because the caller does
+lcd_shifted:
+    PSHX
+    JSR _update_keybuf
+    PULX
 _shifted:
     PSHA
     PSHB
