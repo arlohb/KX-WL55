@@ -134,6 +134,13 @@ CONTRL
         LDS    SP        ;RESTORE PGM'S STACK PTR
         RTI              ;GO
 
+; ABNORMAL ENTRY FROM TRAP
+; Attempt to initialise with register values at trap
+mikbug_trap
+        STS     SP
+        LDS     #STACK
+        BRA     PRINT
+
 ; ENTER FROM SOFTWARE INTERRUPT
 SFE     EQU    *
 mikbug_swi

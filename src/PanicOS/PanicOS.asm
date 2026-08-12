@@ -169,7 +169,7 @@ stub_irq:
 ; vector table
 IRQ2:   ds.w 1,stub_irq ; FFEA
 CMI:    ds.w 1,stub_irq ; FFEC
-TRAP:   ds.w 1,reset    ; FFEE
+TRAP:   ds.w 1,mikbug_trap    ; FFEE
 SIO:    ds.w 1,stub_irq ; FFF0
 TOI:    ds.w 1,stub_irq ; FFF2
 OCI:    ds.w 1,stub_irq ; FFF4
