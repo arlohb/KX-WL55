@@ -6,3 +6,6 @@ burn: PanicOS.bin
 	sudo steam-run ../../onerom/onerom program --config-file onerom.json
 clean:
 	rm -f *.lst *.bin
+
+recover:
+	sudo steam-run ../../onerom/onerom program -u --board fire-32-b --config-file onerom.json
