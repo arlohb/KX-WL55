@@ -169,6 +169,21 @@ _new_line:
     PULB
     RTS
 
+; Function: _inc_cur_pos
+; Increments and stores the text layer cursor position, moving
+; to new line if necessary.
+; Parameters: None
+; Returns: None
+; NOTE: Assumes caller saves A reg
+    SUBROUTINE
+_inc_cur_pos:
+    LDAA CURPOS_COL
+    INCA
+    CMPA #SCREEN_TEXT_COLS
+    BGE _new_line
+    STAA CURPOS_COL
+    RTS
+
 ; Function: lcd_set_cursor_pos
 ; Sets the LCD module cursor position in text mode,
 ; then returns to MWRITE mode.
@@ -295,25 +310,6 @@ _set_scroll_regs:
     STAB LCD00
     LDAA #LCD_MWRITE
     STAA LCD10
-    RTS
-
-; Function: _inc_cur_pos
-; Increments and stores the text layer cursor position, moving
-; to new line if necessary.
-; Parameters: None
-; Returns: None
-; NOTE: Assumes caller saves A reg
-    SUBROUTINE
-_inc_cur_pos:
-    LDAA CURPOS_COL
-    INCA
-    CMPA #SCREEN_TEXT_COLS
-    BLT .done
-    ; new line
-    INC CURPOS_ROW
-    CLRA
-.done
-    STAA CURPOS_COL
     RTS
 
 ; Function: _dec_cur_pos
