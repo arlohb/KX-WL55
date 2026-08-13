@@ -1,21 +1,17 @@
     .processor HD6303
-; fig-FORTH FOR 6800 in ROM on 6800 Multicomp
-; 
-; Assemble using A68 Assembler
-; 	"..\..\A68 6800 Assembler\a68.exe" fig-FORTH_6800.asm -l fig-FORTH_6800.lst -s fig-FORTH_6800.s
-; 	Delete top few lines of fig-FORTH_6800.s S-Records file which have RAM initialization
-; Shift down to base for ROM, make Intel Hex file
-; 	srec_cat fig-FORTH_6800.s -offset - -minimum-addr fig-FORTH_6800.s -o fig-FORTH_6800.hex -Intel
+; fig-FORTH for 6303 in ROM on Panasonic KXP-WL55 Word Processor
+; Adapted from fig-FORTH FOR 6800 in ROM on 6800 Multicomp by Arlo Blythe and Stephen Blythe
 ;
-; Multicomp-6800 Memory Map
-;	0x0000-0x0FFF - 4KB SRAM
-;	0x1000-0x2FFF - 6K ROM (using 8KB entity, but only using 6KB)
-;	0x3000-0x3FFF - 4KB SRAM
-;	0x4000-0x7FFF - 8KB SRAM
-;	0xFC00-0xFCFF - I/O Space
-;		0xFC18 - ACIA (+0=C/S, +1=D)
-;		0xFC28 - VDU (+0=C/S, +1=D)
-;	0xFFFE-0xFFFF - ROM start vector (physically top of the 8KB ROM)
+; Assemble using DASM
+;
+; Uses keyboard and LCD rather than ACIA for I/O
+;
+; Brief Memory Map (see memory_map.asm for detail)
+;	0x0040-0x00FF - HD6303 internal RAM     - some critical Forth registers here
+;       0x2000-0x2FFF - 4KB battery-backed RAM  - not currently used by Forth
+;	0x3000-0x3FFF - 4KB SRAM window         - Forth's workspace
+;	0x4000-0xBFFF - Paged ROM banks         - not currently used by Forth
+;       0xC000-0xFFFF - ROM                     - Forth code is in here
 ;
 ; ASSEMBLY SOURCE LISTING
 ;
@@ -37,7 +33,7 @@
 ;
 ; === FORTH-6800 06-06-79 21:OO
 ;
-; This listing is in the PUBLIC DOMAIN and 
+; This listing is in the PUBLIC DOMAIN and
 ; may be freely copied or published with the
 ; restriction that a credit line is printed
 ; with the material, crediting the
@@ -55,7 +51,7 @@
 ; === 1134-K Aster Ave.
 ; === Sunnyvale, CA 94086
 ;
-;  All terminal 1/0 is done in three subroutines:
+;  All terminal I/O is done in three subroutines:
 ;   PEMIT  ( word # 182 )
 ;   PKEY   (        183 )
 ;   PQTERM (        184 )
@@ -87,52 +83,56 @@
 ;
 ; addr		contents		pointer	init by
 ; ****	*******************************	*******	*******
-; 7FFF						HI
-;	substitute for disc mass memory
-; 3210						LO,MEMEND
-; 320F
-; 	4 buffer sectors of VIRTUAL MEMORY
-; 3000						FIRST
+; FFFF  The rest of ROM (non-Forth)
 ;
-; >>>>>> memory from here up must be RAM <<<<<<
-;
-; 27FF
 ; 	6k of romable "FORTH"		<== IP	ABORT
 ;					<== W
 ;	the VIRTUAL FORTH MACHINE
 ;
-; 1004 <<< WARM START ENTRY >>>
-; 1000 <<< COLD START ENTRY >>>
+; C004 <<< WARM START ENTRY >>>
+; C000 <<< COLD START ENTRY >>>
 ;
-; >>>>>> memory from here down must be RAM <<<<<<
+; 4000-BFFF - BANK0/1 - unused by Forth
 ;
-;  FFE	RETURN STACK base		<== RP	RINIT
+; 3000-3FFF - FORTH RAM WORKSPACE
+
+; 4000                                          MEMEND
+; 	4 buffer sectors of VIRTUAL MEMORY
+; 3DF0						FIRST,RAMEND
+; 3DEE	RETURN STACK base		<== RP	RINIT
 ;
-;  FB4
+; 3DA4
 ;	INPUT LINE BUFFER
 ;	holds up to 132 characters
 ;	and is scanned upward by IN
-;	STAA rting at TIB
-;  F30					<== IN	TIB
-;  F2F	DATA STACK			<== SP	SP0,SINIT
-;    |	grows downward from F2F
+;	starting at TIB
+; 3D20					<== IN	TIB
+; 3D1F	DATA STACK			<== SP	SP0,SINIT
+;    |	grows downward from 3D1F
 ;    v
 ;    ^
 ;    |
 ;    I	DICTIONARY grows upward
-; 
-;  183	end of ram-dictionary.		<== DP	DPINIT
+;
+; 3083	end of ram-dictionary.		<== DP	DPINIT
 ;	"TASK"
 ;
-;  150	"FORTH" (a word)		<=, <== CONTEXT
+; 3050	"FORTH" (a word)		<=, <== CONTEXT
 ;					  `==== CURRENT
-;  148	STAA rt of ram-dictionary.
+; 3048	start of ram-dictionary.
 ;
-;  100	user #l table of variables	<= UP	DPINIT
+; 3000	user #l table of variables	<= UP	DPINIT
+;
+; 2000-2FFF - Battery backed RAM
+; 2FFF						HI
+;	substitute for disc mass memory
+; 2000						LO
+;
+; 0100-1FFF - HD6303 I/O SPACE
+;
 ;   F0	registers & pointers for the virtual machine
 ; 	scratch area used by various words
 ;   E0	lowest address used by FORTH
-;
 ; 0000
 ;
 ;**
@@ -148,18 +148,21 @@
 ;**
 
 NBLK	equ	4		;# of disc buffer blocks for virtual memory
-MEMEND	equ	132*NBLK+$3000	;end of ram
+MEMEND	equ	$4000	        ;end of ram
 
 ;  each block is 132 bytes in size,
 ;  holding 128 characters
+BLKSIZE equ     132
 
-MEMTOP	equ	$7BFF	;32K system absolute end of RAM with 1K spare
-ACIAC	equ	$FC18	;MultiComp ACIA control address
-ACIAD	equ	ACIAC+1	;MultiComp ACIA data address
+; Address of first vmem buffer
+FIRSTV  equ     MEMEND-BLKSIZE*NBLK
+
+VDISK_HI    equ $2FFF
+VDISK_LO    equ $2000
 
 ; RAM was here in origin in source file, now in memory_map.asm
 
-;    The FORTH program (address $1000 to $27FF) is written
+;    The FORTH program (address $C000 to $D7FF) is written
 ;    so that it can be in a ROM, or write-protected if desired
 
 ; This section was previously located at $1000,
@@ -176,12 +179,16 @@ ORIG	nop
 ;*  W A R M   E N T R Y  **
 ;**************************
 	nop
-	jmp	WENT	;warm-STAA rt code, keeps current dictionary intact
+	jmp	WENT	;warm-start code, keeps current dictionary intact
+
+; Since we have put the virtual buffers above this
+; RAMEND = FIRST
+RAMEND  equ FIRSTV
 
 ;
 ;*************** startup parmeters *****************
 ;
-	DC.W	$6800,0000	;cpu & revision
+	DC.W	$6303,0000	;cpu & revision
 	DC.W	0	;topmost word in FORTH vocabulary
 BACKSP	DC.W	$7F	;backspace character for editing
 UPINIT	DC.W	UORIG	;initial user area
@@ -191,12 +198,9 @@ RINIT	DC.W	RAMEND-2	;initial top of return stack
 	DC.W	31	;initial name field width
 	DC.W	0	;initial warning mode (0 = no disc)
 FENCIN	DC.W	REND	;initial fence
-DPINIT	DC.W	REND	;cold STAA rt value for DP
-VOCINT	DC.W	FORTH+8	
-; COLINT	DC.W	132	;initial terminal carriage width
-; DELINT	DC.W	4	;initial carriage return delay
+DPINIT	DC.W	REND	;cold start value for DP
+VOCINT	DC.W	FORTH+8
 COLINT	DC.W	80	;initial terminal carriage width
-DELINT	DC.W	0	;initial carriage return delay
 ;
 ;***************************************************
 ;
@@ -330,7 +334,7 @@ XLOOP	DC.W	*+2
 XPLOOP	DC.W *+2		;Note: +LOOP has an un-signed loop counter
 	pula		;get increment
 	pulb
-XPLOP2	TSTA 
+XPLOP2	TSTA
 	bpl	XPLOF	;forward looping
 	bsr	XPLOPS
 	sec
@@ -385,7 +389,7 @@ XDO	DC.W	*+2	;This is the RUNTIME DO, not the COMPILING DO
 ; ======>>  9  <<
 	DC	$81	; I
 	DC	$C9
-	DC.W	XDO-7	
+	DC.W	XDO-7
 I	DC.W	*+2
 	ldx	RP
 	inx
@@ -430,7 +434,7 @@ DIGIT2	clrb
 ; char-count + $80	;lowest address
 ; char 1
 ; char 2
-; 
+;
 ; char n  + $80
 ; link high byte \___point to previous word
 ; link low  byte /
@@ -532,7 +536,7 @@ FOUND	LDAA	PD	;compute CFA
 ; NOTE :
 ; FC means offset (bytes) to First Character of next word
 ; EW  "     "   to End of Word
-; NC  "     "   to Next Character to STAA rt next enclose at
+; NC  "     "   to Next Character to start next enclose at
 ENCLOS	DC.W	*+2
 	ins
 	pulb		;now, get the low byte, for an 8-bit delimiter
@@ -573,7 +577,7 @@ ENCL6	LDAB	N	;found NUL
 	pshb
 	psha
 	incb
-	bra	ENCL7+2	
+	bra	ENCL7+2
 ;	found NUL following the word instead of SPACE
 ENCL7	LDAB	N
 	pshb		;save EW
@@ -676,7 +680,7 @@ USTAR	DC.W	*+2
 	ins
 	jmp	PUSHBA
 ;
-; The following is a subroutine which 
+; The following is a subroutine which
 ; multiplies top 2 words on stack,
 ; leaving 32-bit result:  high order word in A,B
 ; low order word in 2nd word of stack.
@@ -762,7 +766,7 @@ ORLAB	DC.W	*+2
 	orab	1,x
 	oraa	0,x
 	jmp	STABX
-;	
+;
 ; ======>>  22  <<
 	DC	$83
 	DC	"XO"	;DC	2,XORLAB
@@ -1124,9 +1128,9 @@ DOCOL	ldx	RP	;make room in the stack
 	dex
 	stx	RP
 	LDAA IP
-	LDAB	IP+1	
+	LDAB	IP+1
 	STAA 	2,x	;Store address of the high level word
-	STAB	3,x	;that we are STAA rting to execute
+	STAB	3,x	;that we are starting to execute
 	ldx	W	;Get first sub-word of that definition
 	jmp	NEXT+2	;and execute it
 ;
@@ -1145,7 +1149,7 @@ SEMI	DC.W	DOCOL,QCSP,COMPIL,SEMIS,SMUDGE,LBRAK
 	DC.W	SEMI-4
 CON	DC.W	DOCOL,CREATE,SMUDGE,COMMA,PSCODE
 DOCON	ldx	W
-	LDAA 2,x	
+	LDAA 2,x
 	LDAB	3,x	;A & B now contain the conSTAA nt
 	jmp	PUSHBA
 ;
@@ -1217,7 +1221,7 @@ BL	DC.W	DOCON	;ascii blank
 	DC	$D4
 	DC.W	BL-5
 FIRST	DC.W	DOCON
-	DC.W	MEMEND-528	;(132 * NBLK)
+	DC.W	FIRSTV
 ;
 ; ======>>  58  <<
 	DC	$85
@@ -1502,7 +1506,7 @@ EQUAL	DC.W	DOCOL,SUB,ZEQU
 ;
 ; ======>>  91  <<
 	DC	$81	; <
-	DC	$BC	
+	DC	$BC
 	DC.W	EQUAL-4
 LESS	DC.W	*+2
 	pula
@@ -1656,7 +1660,7 @@ QERR	DC.W	DOCOL,SWAP,ZBRAN
 	DC.W	QERR3-*
 QERR2	DC.W	DROP
 QERR3	DC.W	SEMIS
-;	
+;
 ; ======>>  106  <<
 	DC	$85
 	DC	"?COM"	;DC	4,?COMP
@@ -2285,8 +2289,8 @@ QUIT3	DC.W	BRAN
 	DC	$D4
 	DC.W	QUIT-7
 ABORT	DC.W	DOCOL,SPSTOR,DEC,QSTACK,DRZERO,CR,PDOTQ
-	DC	8
-	DC	"Forth-68"
+	DC	14
+	DC	"fig-Forth 6303"
 	DC.W	FORTH,DEFIN
 	DC.W	QUIT
 ;	DC.W	SEMIS	;never executed
@@ -2310,8 +2314,6 @@ COLD2	dex
 	lds	#XFENCE-1	;put stack at a safe place for now
 	ldx	COLINT
 	stx	XCOLUM
-	ldx	DELINT
-	stx	XDELAY
 	ldx	VOCINT
 	stx	XVOCL
 	ldx	DPINIT
@@ -2341,12 +2343,14 @@ WARM2	dex
 	stx	TRLIM	;clear trace mode
 	ldx	#0
 	stx	BRKPT	;clear breakpoint address
-	jmp	RPSTOR+2 ;STAA rt the virtual machine running !
+	jmp	RPSTOR+2 ;start the virtual machine running !
 ;
 ; Here is the stuff that gets copied to ram :
-; at address $140:
+; above the user variables at $3000
+; These first two initialise the values of USE and PREV which
+; are important when using BLOCK etc.!
 ;
-RAM	DC.W	$3000,$3000,0,0
+RAM	DC.W	FIRSTV,FIRSTV,0,0
 ;
 ; ======>>  (152)  <<
 	DC	$C5	;immediate
@@ -2361,7 +2365,7 @@ RFORTH	DC.W	DODOES,DOVOC,$81A0,TASK-7
 	DC	$CB
 	DC.W	FORTH-8
 RTASK	DC.W	DOCOL,SEMIS
-ERAM	DC	"David Lion"	
+ERAM	DC	"David Lion"
 ;
 ; ######>> screen 57 <<
 ; ======>>  158  <<
@@ -2582,7 +2586,7 @@ MESS	DC.W	DOCOL,WARN,AT,ZBRAN
 	DC.W	MESS4-*
 MESS3	DC.W	PDOTQ
 	DC	6
-	DC	"err # "	;DC	6,err # 
+	DC	"err # "	;DC	6,err #
 	DC.W	DOT
 MESS4	DC.W	SEMIS
 ;
@@ -2670,7 +2674,7 @@ BREAD	DC.W	*+2
 	DC	$CF
 	DC.W	BREAD-13
 LO	DC.W	DOCON
-	DC.W	MEMEND	;a system dependent equate at front
+	DC.W	VDISK_LO
 ;
 ; ======>>  190.2  <<
 	DC	$82
@@ -2678,7 +2682,7 @@ LO	DC.W	DOCON
 	DC	$C9
 	DC.W	LO-5
 HI	DC.W	DOCON
-	DC.W	MEMTOP	;($7BFF in this version)
+	DC.W	VDISK_HI
 ;
 ; ######>> screen 69 <<
 ; ======>>  191  <<
@@ -2874,7 +2878,7 @@ EDIGS	DC.W	DOCOL,DROP,DROP,HLD,AT,PAD,OVER,SUB
 SIGN	DC.W	DOCOL,ROT,ZLESS,ZBRAN
  	DC.W	SIGN2-*
  	DC.W	CLITER
- 	DC	"-"	
+ 	DC	"-"
  	DC.W	HOLD
 SIGN2	DC.W	SEMIS
 ;
@@ -3022,13 +3026,5 @@ VLIST2	DC.W	DUP,IDDOT,SPACE,SPACE,PFA,LFA,AT
 	DC.W	VLIST-8
 NOOP	DC.W	NEXT	;a useful no-op
 ZZZZ	DC.W	0,0,0,0,0,0,0,0	;end of rom program
-;
-;
-		; FDB IO
-		; FDB SWI
-		; FDB POWDWN
-;		ORG $0FFE
-; ENDPAD	DS.B	$4000-ZZZZ-$12
-;ENDPAD 	DS.B $1898		; PAD out to end of ROM
-		; FDB ORIG
+
 	END

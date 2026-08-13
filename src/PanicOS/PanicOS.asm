@@ -6,13 +6,15 @@
     ORG $1C000
     RORG $C000
 
+    ; Ideally keep forth first, so cold start is fixed at C000
+    INCLUDE "forth/forth.asm"
+
     INCLUDE "drivers/keyboard.asm"
     INCLUDE "drivers/lcd.asm"
     INCLUDE "drivers/buzzer.asm"
     INCLUDE "time/delay.asm"
 
     INCLUDE "applications/mikbug.asm"
-    INCLUDE "forth/forth.asm"
 
 START_MENU
     DC #13
