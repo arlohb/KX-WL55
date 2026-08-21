@@ -44,5 +44,9 @@ Use the `P` word to add text to the current screen.
 
 `n P <text here>` will add text to line `n` of the current screen.
 
+### Copying to the RAM disks
+
+Note that data is cached in volatile RAM.  After making changes, run `FLUSH` to ensure these are copied to RAM disk.
+
 
 
