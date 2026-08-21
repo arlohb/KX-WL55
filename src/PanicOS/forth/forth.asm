@@ -2033,7 +2033,7 @@ PAD	DC.W	DOCOL,HERE,CLITER
 ; ######>> screen 48 <<
 ; ======>>  138  <<
 	DC	$84
-	DC	"WORLAB"	;DC	3,WORD
+	DC	"WOR"	;DC	3,WORD
 	DC	$C4
 	DC.W	PAD-6
 WORD	DC.W	DOCOL,BLK,AT,ZBRAN
