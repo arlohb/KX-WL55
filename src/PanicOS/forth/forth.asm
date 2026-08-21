@@ -2666,7 +2666,10 @@ BREAD	DC.W	*+2
 	jmp	NEXT
 ;
 ; The next 3 words are written to create a substitute for disc
-; mass memory,located between $3210 & $7BFF in ram.
+; mass memory,located between $2000 & $2FFF in ram.
+; The logic in R/W has been adjusted to that the first screen
+; is screen 1, rather than screen 0, as there is other logic
+; elsewhere which says that block 0 indicates terminal I/O.
 ;
 ; ======>>  190.1  <<
 	DC	$82
@@ -2690,7 +2693,8 @@ HI	DC.W	DOCON
 	DC	"R/"	;DC	2,R/W
 	DC	$D7
 	DC.W	HI-5
-RW	DC.W	DOCOL,TOR,BBUF,STAR,LO,PLUS,DUP,HI,GREAT,ZBRAN
+RW	DC.W	DOCOL,TOR,BSCR,SUB,BBUF,STAR,LO,PLUS
+        DC.W    DUP,HI,GREAT,OVER,LO,LESS,ORLAB,ZBRAN
 	DC.W	RW2-*
 	DC.W	PDOTQ
 	DC	8
