@@ -25,7 +25,7 @@ and define some more words:
 
 ### Before Use
 
-Before using screens, *always* execute `EMPTY-BUFFERS` first.
+Before using screens, *always* execute `EMPTY-BUFFERS` first.  (This is now done automatically on init!)
 
 Before using a particular screen for the first time, execute `n CLEAR` where `n` is the screen number.
 If not, then even reading the screen may cause crashes.
