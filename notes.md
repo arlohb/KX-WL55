@@ -38,6 +38,12 @@
 [datasheet](./assets/SED1330-datasheet.pdf)
 [technial manual](./assets/SED1330-technical-manual.pdf)
 
+## FDC - 63266
+
+Can't find detailed data for this anywhere.
+There's very good info on the adjacent 63265 in this [datasheet/book](./assets/HD63265_Floppy_Disk_Controller_Users_Manual_2ed_Mar89.pdf)
+Also a few other links in this [thread](https://forums.bannister.org/ubbthreads.php?ubb=showflat&Number=113733&page=73)
+
 # Address state on boot
 
 - JM1 is not fitted, so VECT is low, so C000-FFFF is IC6.
