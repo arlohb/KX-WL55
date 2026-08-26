@@ -3006,6 +3006,7 @@ TRIAD3	DC.W	XLOOP
 ;
 ; ######>> screen 78 <<
 ; ======>>  222  <<
+last_forth          ; *** MUST BE AT THE BEGINNING OF THE *LAST* WORD IN THIS FILE!
 	DC	$85
 	DC	"VLIS"	;DC	4,VLIST
 	DC	$D4
@@ -3023,12 +3024,14 @@ VLIST2	DC.W	DUP,IDDOT,SPACE,SPACE,PFA,LFA,AT
 	DC.W	VLIST1-*
 	DC.W	DROP
 	DC.W	SEMIS
+
+        INCLUDE "forth/editor.asm"
 ;
 ; ======>>  XX  <<
 	DC	$84
 	DC	"NOO"	;DC	3,NOOP
 	DC	$D0
-	DC.W	VLIST-8
+	DC.W	last_editor     ; Must point to the last command in the last include file above
 NOOP	DC.W	NEXT	;a useful no-op
 ZZZZ	DC.W	0,0,0,0,0,0,0,0	;end of rom program
 
