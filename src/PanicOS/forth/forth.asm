@@ -3026,12 +3026,13 @@ VLIST2	DC.W	DUP,IDDOT,SPACE,SPACE,PFA,LFA,AT
 	DC.W	SEMIS
 
         INCLUDE "forth/editor.asm"
+        INCLUDE "forth/utils.asm"
 ;
 ; ======>>  XX  <<
 	DC	$84
 	DC	"NOO"	;DC	3,NOOP
 	DC	$D0
-	DC.W	last_editor     ; Must point to the last command in the last include file above
+	DC.W	last_utils     ; Must point to the last command in the last include file above
 NOOP	DC.W	NEXT	;a useful no-op
 ZZZZ	DC.W	0,0,0,0,0,0,0,0	;end of rom program
 
