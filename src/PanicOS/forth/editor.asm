@@ -51,8 +51,6 @@ DMOVE   DC.W    DOCOL,LINE,CL,CMOVE,UPDATE
 ; Note: to prevent clashes with hex values, etc., these commands have a / prepended
 ; In the original forth, they're H, E, etc., here /H, /E etc.
 ;
-; Missing: /S, /D
-;
 slh
         DC      $82
         DC      "/"
@@ -69,6 +67,29 @@ sle
 SLE     DC.W    DOCOL,LINE,CL,BLANKS,UPDATE
         DC.W    SEMIS
 
+sls
+        DC      $82
+        DC      "/"
+        DC      $D3
+        DC.W    sle
+SLS     DC.W    DOCOL
+        DC.W    DUP,ONE,SUB,LIT,$0E,XDO
+SLS2    DC.W    I,LINE,I,ONEP,DMOVE,LIT,$FFFF,XPLOOP
+        DC.W    SLS2-*
+        DC.W    SLE
+        DC.W    SEMIS
+
+sld
+        DC      $82
+        DC      "/"
+        DC      $C4
+        DC.W    sls
+SLD     DC.W    DOCOL
+        DC.W    DUP,SLH,LIT,$F,DUP,ROT,XDO
+SLD2    DC.W    I,ONEP,LINE,I,DMOVE,XLOOP
+        DC.W    SLD2-*
+        DC.W    SLE
+        DC.W    SEMIS
 ;
 ; ######>> screen 90 <<
 ;
@@ -80,7 +101,7 @@ sll
         DC      $82
         DC      "/"
         DC      $CC
-        DC.W    sle
+        DC.W    sld
 SLL     DC.W    DOCOL,SCR,AT,LIST
         DC.W    SEMIS
 
