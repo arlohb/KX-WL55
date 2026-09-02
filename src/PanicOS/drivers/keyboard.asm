@@ -1,15 +1,15 @@
 
 ; | Row | 7 | 6 | 5         | 4     | 3   | 2     | 1           | 0    |
 ; |-----|---|---|-----------|-------|-----|-------|-------------|------|
-; | 1   | M |   | ↑         | space | R󰘶  | code  | quick erase | <->  |
-; | 2   | - | B | print     | →     | ←   | reloc | ↓           | tab  |
-; | 3   | N | V | next page | ,     | .   | alt   | /           | caps |
-; | 4   | J | G | help      | 󰌑     | ÷   |       | @           | L󰘶   |
-; | 5   | H | F | menu      | K     | L   |       | ;           | 1    |
-; | 6   | U | T | C         | 󰁮     | 󱦒   | X     | []          | Z    |
-; | 7   | Y | R | D         | I     | O   | S     | P           | A    |
-; | 8   | 7 | 5 | E         | =     | <-- | W     | -->         | Q    |
-; | 9   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
+; | 0   | M |   | ↑         | space | R󰘶  | code  | quick erase | <->  |
+; | 1   | - | B | print     | →     | ←   | reloc | ↓           | tab  |
+; | 2   | N | V | next page | ,     | .   | alt   | /           | caps |
+; | 3   | J | G | help      | 󰌑     | ÷   |       | @           | L󰘶   |
+; | 4   | H | F | menu      | K     | L   |       | ;           | 1    |
+; | 5   | U | T | C         | 󰁮     | 󱦒   | X     | []          | Z    |
+; | 6   | Y | R | D         | I     | O   | S     | P           | A    |
+; | 7   | 7 | 5 | E         | =     | <-- | W     | -->         | Q    |
+; | 8   | 6 | 4 | 3         | 8     | 9   | 2     | 0           |      |
 
 ;Special keycodes
 ;$80 - invalid key
@@ -37,12 +37,12 @@ KEYCHARS_S:
     BYTE  '&, '^, 'e, '+,$80, 'w,$80, 'q
     BYTE  '_, '$, '*, '', '(, '", '),$80
 
-; Function: lcd_shifted
+; Function: keyb_shifted
 ; We're shifted if bit 3 of row 0 is pressed, or bit 0 or row 3
 ; Returns: Z flag not set if we're shifted (so BNE after for shifted)
 ;
 ; Internal _shifted version doesn't update keybuf, because the caller does
-lcd_shifted:
+keyb_shifted:
     PSHX
     JSR _update_keybuf
     PULX
@@ -60,6 +60,19 @@ _shifted:
     PULA
     RTS
 
+; Function: keyb_escape
+; Escape is pressed if bit 5 of row 4 is pressed
+; Returns: Z flag not set if escape pressed (do BNE after for escape pressed)
+keyb_escape:
+    PSHX
+    PSHA
+    JSR _update_keybuf
+    LDAA KEYBUF_NEXT+4
+    COMA
+    ANDA #$20
+    PULA
+    PULX
+    RTS
 
 ; Function: keyb_getch
 ; Loop until a key is released, return the ASCII value

@@ -2627,11 +2627,16 @@ PKEY	JSR	keyb_getch
 ;
 ; ######>> screen 64 <<
 ; ======>>  184  << code for ?TERMINAL
-; We'll just use this to pause output while SHIFT is held.
-PQTER   JSR lcd_shifted
+; We'll use this to pause output while SHIFT is held.
+; If Esc is pressed, we'll break.
+PQTER   JSR keyb_shifted
         BNE PQTER
+        JSR keyb_escape
+        BNE PQTER2
         LDAA #0 ;don't break
-PQTER2	rts
+        rts
+PQTER2  LDAA #1 ;break
+        rts
 ;
 ; ======>>  185  << code for CR
 PCR	LDAA #$D	;carriage return
