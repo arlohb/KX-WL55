@@ -4,10 +4,33 @@
 ;
     SEG.U IO
     ORG $0
-P1DDR: ds.b 1
-P2DDR: ds.b 1
-PORT1: ds.b 1
-PORT2: ds.b 1
+P1DDR:  ds.b 1
+P2DDR:  ds.b 1
+PORT1:  ds.b 1
+PORT2:  ds.b 1
+        ds.b 4
+TCSR1:  ds.b 1
+FRCH:   ds.b 1
+FRCL:   ds.b 1
+OCR1H:  ds.b 1
+OCR1L:  ds.b 1
+ICRH:   ds.b 1
+ICRL:   ds.b 1
+TCSR2:  ds.b 1
+RMCR:   ds.b 1
+TRCSR:  ds.b 1
+RxDR:   ds.b 1
+TxDR:   ds.b 1
+RP5CR:  ds.b 1
+PORT5:  ds.b 1
+P6DDR:  ds.b 1
+PORT6:  ds.b 1
+        ds.b 1
+OCR2H:  ds.b 1
+OCR2L:  ds.b 1
+TCSR3:  ds.b 1
+TCR:    ds.b 1
+T2UC:   ds.b 1
 
 ;
 ; 0020-003F - NOT USED
@@ -94,6 +117,9 @@ LCD10: ds.b 16
 ;
 ; 0C00-0FFF - FDD Controller
 ;
+FDCSR: ds.b 1
+FDCDR: ds.b 1
+FDCAR: ds.b 1
 
 ;
 ; 1000-1FFF - NOT USED
