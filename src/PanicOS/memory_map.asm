@@ -117,6 +117,8 @@ LCD10: ds.b 16
 ;
 ; 0C00-0FFF - FDD Controller
 ;
+    SEG.U FDC
+    ORG $0C00
 FDCSR: ds.b 1
 FDCDR: ds.b 1
 FDCAR: ds.b 1

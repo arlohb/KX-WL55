@@ -11,7 +11,7 @@ dots
         DC      $82
         DC      "."
         DC      $D3
-        DC.W    last_editor
+        DC.W    last_fdc
 DOTS    DC.W    DOCOL
         DC.W    SPAT,SZERO,AT,EQUAL,ZBRAN
         DC.W    DOTS2-*

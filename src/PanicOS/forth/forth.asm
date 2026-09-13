@@ -3031,6 +3031,7 @@ VLIST2	DC.W	DUP,IDDOT,SPACE,SPACE,PFA,LFA,AT
 	DC.W	SEMIS
 
         INCLUDE "forth/editor.asm"
+        INCLUDE "forth/fdc.asm"
         INCLUDE "forth/utils.asm"
 ;
 ; ======>>  XX  <<
