@@ -324,11 +324,6 @@ FDC_INIT_DONE
 
         ; DO_READ
         SUBROUTINE
-do_read
-        DC      $87
-        DC      "DO_REA"
-        DC      $C4
-        DC.W    fdc_init
 DO_READ ; (Invisible word to send the command and do the read loop)
         DC.W    *+2
 
@@ -350,11 +345,16 @@ DO_READ ; (Invisible word to send the command and do the read loop)
         pulb    ;lo byte (param)
         cmpa    #$ff
         beq     .op_complete
+        ldx     #$0
 .wait_rdy_param
         ldaa    FDCSR
         anda    #$e0
         cmpa    #$80
         beq     .fdc_rdy
+        inx
+        bne     .wait_rdy_param
+        swi
+        bra     .done
 
 .op_complete
         pulx
@@ -382,36 +382,122 @@ DO_READ ; (Invisible word to send the command and do the read loop)
         jmp NEXT
         nop
 
-last_fdc
-        ; FDC_SECTOR_READ ( MADDR CA HA SA --- f )
-        ; Reads a sector from the FDC to the space at MADDR
-        ; On exit f=true indicates success.
-fdc_read
-        DC      $8F
-        DC      "FDC_SECTOR_REA"
-        DC      $C4
-        DC.W    do_read
-FDC_READ
+PREP_RW_CMD_STACK
         DC.W    DOCOL
-        ; Ready the stack for SEND_CMD
         DC.W    DUP,TOR,SWAP,TOR,SWAP,TOR,LIT,$FFFF,SWAP; --- MADDR -1 SA
         DC.W    ZERO,LIT,$1B,ROT                        ; --- MADDR -1 MNL=0 GSL=$1B ESN=SA
         DC.W    TWO,FROMR                               ; --- MADDR -1 MNL GSL ESN RL=2 CA
         DC.W    FROMR,SWAP,FROMR,ROT,ROT                ; --- MADDR -1 MNL GSL ESN RL SA HA CA
         DC.W    OVER,LIT,$4,STAR                        ; --- MADDR -1 MNL GSL ESN RL SA HA CA HSL/US
+        DC.W    SEMIS
+
+        SUBROUTINE
+CHECK_RW_CMD_RESULTS
+        DC.W    DOCOL
+        DC.W    READ_RESULTS,DROP,DROP,DROP,DROP        ; --- SSB0 SSB1 SSB2
+        DC.W    ROT,LIT,$40,ANDLAB,LIT,$40,EQUAL,ZBRAN
+        DC.W    .ssb0_ok-*                             ; SSB0 OK - success
+        DC.W    SWAP,LIT,$100,STAR,PLUS,LIT,$8000,EQUAL,ZEQU,ZBRAN
+        DC.W    .ssb1_2_ok-*                             ; SSB1/2 OK - success
+        DC.W    ZERO,BRAN
+        DC.W    .fail-*                             ; Failed
+.ssb0_ok
+        DC.W    DROP,DROP                               ; Drop SSB1/2, not checking
+.ssb1_2_ok
+        DC.W    ONE                                     ; Indicate success
+.fail
+        DC.W    SEMIS
+
+        ; FDC_READ ( MADDR CA HA SA --- f )
+        ; Reads a sector from the FDC to the space at MADDR
+        ; On exit f=true indicates success.
+fdc_read
+        DC      $88
+        DC      "FDC_REA"
+        DC      $C4
+        DC.W    fdc_init
+FDC_READ
+        DC.W    DOCOL
+        DC.W    PREP_RW_CMD_STACK
         DC.W    LIT,$46
         DC.W    DO_READ
-        DC.W    READ_RESULTS,DROP,DROP,DROP,DROP        ; --- SSB0 SSB1 SSB2
-        DC.W    ROT,LIT,$40,ANDLAB,$40,EQUAL,ZBRAN
-        DC.W    FDC_READ1-*                             ; SSB0 OK - success
-        DC.W    OVER,LIT,$100,STAR,PLUS,$8000,EQUAL,ZBRAN
-        DC.W    FDC_READ2-*                             ; SSB1/2 OK - success
-        DC.W    ZERO,BRAN
-        DC.W    FDC_READ3-*                             ; Failed
-FDC_READ1
-        DC.W    DROP,DROP                               ; Drop SSB1/2, not checking
-FDC_READ2
-        DC.W    ONE                                     ; Indicate success
-FDC_READ3
+        DC.W    CHECK_RW_CMD_RESULTS
+        DC.W    SEMIS
+
+        ; DO_WRITE
+        SUBROUTINE
+DO_WRITE; (Invisible word to send the command and do the write loop)
+        DC.W    *+2
+
+        ldx     #$0
+.wait_rdy_cmd
+        pula    ;hi byte (ignore)
+        pulb    ;lo byte (cmd)
+        ldaa    FDCSR
+        anda    #$F0
+        cmpa    #$80
+        beq     .fdc_rdy
+        inx
+        bne     .wait_rdy_cmd
+        swi
+        bra     .done
+.fdc_rdy
+        stab    FDCDR
+        pula    ;hi byte (ignore)
+        pulb    ;lo byte (param)
+        cmpa    #$ff
+        beq     .op_complete
+        ldx     #$0
+.wait_rdy_param
+        ldaa    FDCSR
+        anda    #$e0
+        cmpa    #$80
+        beq     .fdc_rdy
+        inx
+        bne     .wait_rdy_param
+        swi
+        bra     .done
+
+.op_complete
+        pulx
+.write_loop
+        pshx
+        ldx     #0
+.wait_txr_loop
+        ldab    FDCSR
+        bmi     .txr_ok
+        inx
+        bne     .wait_txr_loop
+        bra     .write_time_out
+.txr_ok
+        pulx
+        bitb    #$20
+        beq     .done
+        ldab    0,x
+        stab    FDCDR
+        inx
+        bra     .write_loop
+
+.write_time_out
+        pulx
+.done
+        jmp NEXT
+        nop
+
+last_fdc
+        ; FDC_WRITE ( MADDR CA HA SA --- f )
+        ; Writes a sector from the FDC from the space at MADDR
+        ; On exit f=true indicates success.
+fdc_write
+        DC      $89
+        DC      "FDC_WRIT"
+        DC      $C5
+        DC.W    fdc_read
+FDC_WRITE
+        DC.W    DOCOL
+        DC.W    PREP_RW_CMD_STACK
+        DC.W    LIT,$45
+        DC.W    DO_WRITE
+        DC.W    CHECK_RW_CMD_RESULTS
         DC.W    SEMIS
 
