@@ -205,7 +205,7 @@ flush
         DC      "FLUS"
         DC      $C8
         DC.W    clear
-FLUSH   DC.W    DOCOL,LIT,(MEMEND-FIRSTV)/132   ; (LIMIT-FIRST)/(BBUF+4)
+FLUSH   DC.W    DOCOL,LIT,(MEMEND-FIRSTV)/VBLKSIZE   ; (LIMIT-FIRST)/(BBUF+4)
         DC.W    ZERO,XDO
 FLUSH2  DC.W    LIT,$7FFF,BUFFER,DROP
         DC.W    XLOOP

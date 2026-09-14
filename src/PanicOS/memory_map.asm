@@ -107,6 +107,15 @@ KEYSCAN: ds.b 1
 KEYMATRIX: ds.b 1
 
 ;
+; 0600-063F - Expansion memory bank select
+;
+    SEG.U BANKSEL
+    ORG $0600
+BANKSEL0: ds.b 1
+    ORG $0620
+BANKSEL1: ds.b 1
+
+;
 ; 0A00-0BFF - LCD Display
 ;
     SEG.U LCD
@@ -130,6 +139,13 @@ FDCAR: ds.b 1
 ;
 ; 2000-2FFF - IC3 - 4K battery-backed RAM
 ;
+    SEG.U NVRAM
+NUM_VSCREENS equ 3
+;   $2000-2BFF are Forth vdisk (for screens 1-3)
+    ORG $2000
+VDISK_LO
+    ORG $2000+($400*NUM_VSCREENS)-1
+VDISK_HI    ds.b    1
 
 ;
 ; 3000-3FFF - IC4/5 - 4K RAM window
@@ -212,6 +228,10 @@ REND	equ	*	;(first empty location in dictionary)
 
 ; 4000-7FFF - BANK0 16K window
 ;
+;
+        SEG.U BANK0
+        ORG $8000
+MEMEND
 
 ;
 ; 8000-BFFF - BANK1 16K window
