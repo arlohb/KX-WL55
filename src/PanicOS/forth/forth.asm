@@ -92,22 +92,24 @@
 ; C004 <<< WARM START ENTRY >>>
 ; C000 <<< COLD START ENTRY >>>
 ;
-; 4000-BFFF - BANK0/1 - unused by Forth
+; 4000-BFFF - BANK1 - unused by Forth
 ;
-; 3000-3FFF - FORTH RAM WORKSPACE
+; 4000-7FFF - BANK0 - \
+;                      >- FORTH RAM WORKSPACE (see below)
+; 3000-3FFF -         /
 
-; 4000                                          MEMEND
-; 	4 buffer sectors of VIRTUAL MEMORY
-; 3DF0						FIRST,RAMEND
-; 3DEE	RETURN STACK base		<== RP	RINIT
+; 8000                                          MEMEND
+; 	8 buffer sectors of VIRTUAL MEMORY
+; 6FE0						FIRST,RAMEND
+; 6FDE	RETURN STACK base		<== RP	RINIT
 ;
-; 3DA4
+; 6F94
 ;	INPUT LINE BUFFER
 ;	holds up to 132 characters
 ;	and is scanned upward by IN
 ;	starting at TIB
-; 3D20					<== IN	TIB
-; 3D1F	DATA STACK			<== SP	SP0,SINIT
+; 6F12					<== IN	TIB
+; 6F10	DATA STACK			<== SP	SP0,SINIT
 ;    |	grows downward from 3D1F
 ;    v
 ;    ^
@@ -124,8 +126,8 @@
 ; 3000	user #l table of variables	<= UP	DPINIT
 ;
 ; 2000-2FFF - Battery backed RAM
-; 2FFF						HI
-;	substitute for disc mass memory
+; 27FF						HI
+;	substitute for disc mass memory (screens 1-3)
 ; 2000						LO
 ;
 ; 0100-1FFF - HD6303 I/O SPACE
@@ -147,18 +149,17 @@
 ;	A contains the high byte, B, the low byte.
 ;**
 
-NBLK	equ	4		;# of disc buffer blocks for virtual memory
-MEMEND	equ	$4000	        ;end of ram
+NBLK	equ	3		;# of disc buffer blocks for virtual memory
+;MEMEND	equ	$8000	        ;end of ram - defined in memory_map.asm
 
-;  each block is 132 bytes in size,
-;  holding 128 characters
-BLKSIZE equ     132
+; size of a block of disk memory - should be the same as the bytes in a sector
+BLKSIZE equ     512
+
+; additional 4 bytes for status
+VBLKSIZE equ     BLKSIZE+4
 
 ; Address of first vmem buffer
-FIRSTV  equ     MEMEND-BLKSIZE*NBLK
-
-VDISK_HI    equ $2FFF
-VDISK_LO    equ $2000
+FIRSTV  equ     MEMEND-(VBLKSIZE*NBLK)
 
 ; RAM was here in origin in source file, now in memory_map.asm
 
@@ -529,6 +530,13 @@ FOUND	LDAA	PD	;compute CFA
 ;
 ; ######>> screen 20 <<
 ; ======>>  12  <<
+; ENCLOSE ( addr1 c --- addr1 n1 n2 n3 )
+; Scans text from addr1 with delimiter `c`, returns:
+; - addr1 (unchanged)
+; - n1 - offset to first non-delimiter
+; - n2 - offset to first delimiter after text at n1
+; - n3 - offset to the first character not included, where the next
+;        enclose should start
 	DC	$87
 	DC	"ENCLOS"	;DC	6,ENCLOSE
 	DC 	$C5
@@ -540,49 +548,62 @@ FOUND	LDAA	PD	;compute CFA
 ENCLOS	DC.W	*+2
 	ins
 	pulb		;now, get the low byte, for an 8-bit delimiter
+        stab    N+2
 	tsx
 	ldx	0,x
 	clr	N
+        clr     N+1
 ;	wait for a non-delimiter or a NUL
 ENCL2	LDAA 0,x
 	beq	ENCL6
-	cba		;CHECK FOR DELIM
+	cmpa    N+2
 	bne	ENCL3
 	inx
-	inc	N
+        ldd     N
+        xgdx
+	inx
+        xgdx
+        std     N
 	bra	ENCL2
 ;	found first character. Push FC
-ENCL3	LDAA	N	;found first char.
+ENCL3	LDAA	N+1	;found first char.
 	psha
-	clra
+	LDAA    N
 	psha
 ;	wait for a delimiter or a NUL
 ENCL4	LDAA 0,x
 	beq	ENCL7
-	cba		;check for delim.
+	cmpa    N+2
 	beq	ENCL5
 	inx
-	inc	N
+        ldd     N
+        xgdx
+        inx
+        xgdx
+	std	N
 	bra	ENCL4
 ;	found EW. Push it
-ENCL5	LDAB	N
-	clra
+ENCL5	ldd	N
 	pshb
 	psha
 ;	advance and push NC
-	incb
+        xgdx
+	inx
+        xgdx
 	jmp	PUSHBA
 ;	found NUL before non-delimiter, therefore there is no word
-ENCL6	LDAB	N	;found NUL
+ENCL6	ldd	N	;found NUL
 	pshb
 	psha
-	incb
-	bra	ENCL7+2
+        xgdx
+        inx
+        xgdx
+	bra	ENCL7A
 ;	found NUL following the word instead of SPACE
-ENCL7	LDAB	N
-	pshb		;save EW
+ENCL7	ldd	N
+ENCL7A	pshb		;save EW
 	psha
-ENCL8	LDAB	N	;save NC
+ENCL8	ldd	N	;save NC
 	jmp	PUSHBA
 ;
 ; ######>> screen 21 <<
@@ -1237,7 +1258,7 @@ LIMIT	DC.W	DOCON
 	DC	$C6
 	DC.W	LIMIT-8
 BBUF	DC.W	DOCON
-	DC.W	128
+	DC.W	BLKSIZE
 ;
 ; ======>>  60  <<
 	DC	$85
@@ -1245,8 +1266,7 @@ BBUF	DC.W	DOCON
 	DC	$D2
 	DC.W	BBUF-8
 BSCR	DC.W	DOCON
-	DC.W	8
-;	blocks/screen = 1024 / "B/BUF" = 8
+	DC.W	1024/BLKSIZE
 ;
 ; ======>>  61  <<
 	DC	$87
@@ -1974,7 +1994,8 @@ FQUERY	DC.W	DOCOL,TIB,AT,COLUMS
 	DC.W	FQUERY-8
 NULL	DC.W	DOCOL,BLK,AT,ZBRAN
 	DC.W	NULL2-*
-	DC.W	ONE,BLK,PSTORE
+        ;DC.W    LIT,"N",EMIT   ; DEBUG!
+	DC.W	ONE,BLK,PSTORE                      ; TRAIL - Adds 1 to BLK
 	DC.W	ZERO,IN,STORE,BLK,AT,BSCR,MODLAB
 	DC.W	ZEQU
 ;     check for end of screen
@@ -2032,15 +2053,23 @@ PAD	DC.W	DOCOL,HERE,CLITER
 ;
 ; ######>> screen 48 <<
 ; ======>>  138  <<
+; WORD ( c --- )
+; Consume the next word delimited by `c` from the current input stream, selected by BLK.
+; Leading occurrences of `c` are ignored.
+; Leaves the character count, followed by the characters, and two or more blanks at HERE.
 	DC	$84
 	DC	"WOR"	;DC	3,WORD
 	DC	$C4
 	DC.W	PAD-6
-WORD	DC.W	DOCOL,BLK,AT,ZBRAN
+WORD	DC.W	DOCOL
+        ;DC.W    LIT,"W",EMIT,LIT,"b",EMIT,BLK,AT,DOT,LIT,"i",EMIT,IN,AT,DOT ; DEBUG!
+        ;DC.W    LIT,"W",EMIT,DOTS   ; DEBUG!
+        DC.W    BLK,AT,ZBRAN
 	DC.W	WORD2-*
 	DC.W	BLK,AT,BLOCK,BRAN
 	DC.W	WORD3-*
 WORD2	DC.W	TIB,AT
+        ;DC.W    LIT,"t",EMIT ; DEBUG!
 WORD3	DC.W	IN,AT,PLUS,SWAP,ENCLOS,HERE,CLITER
 	DC	34
 	DC.W	BLANKS,IN,PSTORE,OVER,SUB,TOR,R,HERE
@@ -2086,11 +2115,17 @@ NUMB2	DC.W	DROP,FROMR,ZBRAN
 NUMB3	DC.W	SEMIS
 ;
 ; ======>>  141  <<
+; DFIND ( --- PFA LEN TRUE ) or ( --- FALSE )
+; Consumes the next text word (blank-delimited) from the current input stream
+; into HERE, and searches vocabularies for a matching entry.
+; If one is found, returns PFA, length field and TRUE, otherwise FALSE.
 	DC	$85
 	DC	"-FIN"	;DC	4,-FIND
 	DC	$C4
 	DC.W	NUMB-9
-DFIND	DC.W	DOCOL,BL,WORD,HERE,CONTXT,AT,AT
+DFIND	DC.W	DOCOL
+        ;DC.W    LIT,"-",EMIT,LIT,"F",EMIT,DOTS  ; DEBUG!
+        DC.W    BL,WORD,HERE,CONTXT,AT,AT
 	DC.W	PFIND,DUP,ZEQU,ZBRAN
 	DC.W	DFIND2-*
 	DC.W	DROP,HERE,LATEST,PFIND
@@ -2192,11 +2227,15 @@ DLITE2	DC.W	SEMIS
 ;
 ; ######>> screen 53 <<
 ; ======>>  149  <<
+;
+; INTERPRET ( --- )
+; Interpret or compile source text input words from the current BLK
 	DC	$89
 	DC	"INTERPRE"	;DC	8,INTERPRET
 	DC	$D4
 	DC.W	DLITER-11
 INTERP	DC.W	DOCOL
+        ;DC.W    LIT,"I",EMIT,DOTS   ; DEBUG!
 INTER2	DC.W	DFIND,ZBRAN
 	DC.W	INTER5-*
 	DC.W	STATE,AT,LESS
@@ -2293,7 +2332,15 @@ ABORT	DC.W	DOCOL,SPSTOR,DEC,QSTACK,DRZERO,CR,PDOTQ
 	DC	"fig-Forth 6303"
 	DC.W	FORTH,DEFIN
         DC.W    MTBUF
-	DC.W	QUIT
+        DC.W    FDC_INIT,ZEQU,ZBRAN
+        DC.W    ABORT2-*
+	DC.W	PDOTQ
+	DC	25
+	DC	" WARNING: FDC init failed"
+        DC.W    BRAN
+        DC.W    ABORT3-*
+ABORT2  DC.W    ONE,WARN,STORE   ; Enable error messages from screens
+ABORT3	DC.W	QUIT
 ;	DC.W	SEMIS	;never executed
 ;
 ; ######>> screen 56 <<
@@ -2478,12 +2525,11 @@ PREV	DC.W	DOCON
 	DC	"+BU"	;DC	3,+BUF
 	DC	$C6
 	DC.W	PREV-7
-PBUF	DC.W	DOCOL,CLITER
-	DC	$84
+PBUF	DC.W	DOCOL,LIT,VBLKSIZE
 	DC.W	PLUS,DUP,LIMIT,EQUAL,ZBRAN
 	DC.W	PBUF2-*
 	DC.W	DROP,FIRST
-PBUF2	DC.W	DUP,PREV,AT,SUB
+PBUF2	DC.W	DUP,PREV,AT,SUB,ZEQU
 	DC.W	SEMIS
 ;
 ; ======>>  171  <<
@@ -2596,7 +2642,9 @@ MESS4	DC.W	SEMIS
 	DC	"LOA"	;DC	3,LOAD	;input:scr #
 	DC	$C4
 	DC.W	MESS-10
-LOAD	DC.W	DOCOL,BLK,AT,TOR,IN,AT,TOR,ZERO,IN,STORE
+LOAD	DC.W	DOCOL
+        ;DC.W    LIT,"L",EMIT,DOTS   ; DEBUG!
+        DC.W    BLK,AT,TOR,IN,AT,TOR,ZERO,IN,STORE
 	DC.W	BSCR,STAR,BLK,STORE
 	DC.W	INTERP,FROMR,IN,STORE,FROMR,BLK,STORE
 	DC.W	SEMIS
@@ -2673,7 +2721,7 @@ BREAD	DC.W	*+2
 ;
 ; The next 3 words are written to create a substitute for disc
 ; mass memory,located between $2000 & $2FFF in ram.
-; The logic in R/W has been adjusted to that the first screen
+; The logic in R/W has been adjusted so that the first screen
 ; is screen 1, rather than screen 0, as there is other logic
 ; elsewhere which says that block 0 indicates terminal I/O.
 ;
@@ -2695,28 +2743,111 @@ HI	DC.W	DOCON
 ;
 ; ######>> screen 69 <<
 ; ======>>  191  <<
-	DC	$83
+;
+; : R/W_V ( BUFADR BLOCKn fRnW --- )  ( fRnW : 1=READ 0=WRITE )
+;     >R ( save boolean )
+;     B/BUF * LO + ( convert to address )
+;     DUP HI > OVER LO < OR 6 ?ERROR ( DISC RANGE ERROR )
+;     R> ( retrieve boolean )
+;     IF ( read )
+;       SWAP
+;     THEN
+;     B/BUF CMOVE
+;   ;
+
+rw_v	DC	$85
+	DC	"R/W_"	;DC	2,R/W
+	DC	$D6
+	DC.W	HI-5
+RW_V	DC.W	DOCOL,TOR
+        DC.W    BBUF,STAR,LO,PLUS
+        DC.W    DUP,HI,GREAT,OVER,LO,LESS,ORLAB
+        DC.W    LIT,6,QERR
+	DC.W	RW_V3-*
+	DC.W	SWAP
+RW_V3	DC.W	BBUF,CMOVE
+	DC.W	SEMIS
+
+MAX_DSN EQU 80*2*9-1
+
+; : DSN->CHS ( dsn --- cyl head sector )
+;   ( Convert disk sector number, starting at 0, to CHS )
+;   DUP MAX_DSN > 6 ?ERROR ( DISC RANGE error )
+;   DUP 1 AND SWAP 2 / ( --- head dsn/2 )
+;   9 /MOD SWAP 1+ ( --- head cyl sector )
+;   ROT SWAP ( --- cyl head sector )
+; ;
+dsnchs  DC      $88
+        DC      "DSN->CH"
+        DC      "S"+$80
+        DC.W    rw_v
+DSNCHS  DC.W    DOCOL
+        DC.W    DUP,LIT,MAX_DSN,GREAT
+        DC.W    LIT,6,QERR
+        DC.W    DUP,ONE,ANDLAB,SWAP,TWO,SLASH
+        DC.W    LIT,9,SLMOD,SWAP,ONEP
+        DC.W    ROT,SWAP
+        DC.W    SEMIS
+
+NUM_VSCREEN_BLKS    equ NUM_VSCREENS*(1024/BLKSIZE)
+
+; : R/W_D ( BUFADR BLOCKn fRnW --- )
+;     >R ( save boolean )
+;     NUM_VSCREEN_BLKS - ( Get 0-based sector number )
+;     DSN->CHS ( Convert to cyl head sector )
+;     R> IF
+;       FDC_READ
+;     ELSE
+;       FDC_WRITE
+;     THEN
+; ;
+rw_d    DC      $85
+        DC      "R/W_"
+        DC      "D"+$80
+        DC.W    dsnchs
+RW_D    DC.W    DOCOL
+        DC.W    TOR
+        DC.W    LIT,NUM_VSCREEN_BLKS,SUB
+        DC.W    DSNCHS
+        DC.W    FROMR,ZBRAN
+        DC.W    RW_D2-*
+        DC.W    FDC_READ
+        DC.W    BRAN
+        DC.W    RW_D3-*
+RW_D2   DC.W    FDC_WRITE
+RW_D3   DC.W    SEMIS
+
+; : R/W ( BUFADR BLOCKn fRnW --- )
+;     SWAP B/SCR - SWAP ( adjust so that screen 1 is the first )
+;     OVER 1+ NUM_VSCREEN_BLKS GREAT IF
+;       RW_D
+;     ELSE
+;       RW_V
+;     THEN
+; ;
+rw	DC	$83
 	DC	"R/"	;DC	2,R/W
 	DC	$D7
-	DC.W	HI-5
-RW	DC.W	DOCOL,TOR,BSCR,SUB,BBUF,STAR,LO,PLUS
-        DC.W    DUP,HI,GREAT,OVER,LO,LESS,ORLAB,ZBRAN
-	DC.W	RW2-*
-	DC.W	PDOTQ
-	DC	8
-	DC	" Range ;"	;DC	8, Range ;?
-	DC.W	QUIT
-RW2	DC.W	FROMR,ZBRAN
-	DC.W	RW3-*
-	DC.W	SWAP
-RW3	DC.W	BBUF,CMOVE
-	DC.W	SEMIS
+	DC.W	rw_d
+RW      DC.W    DOCOL
+        DC.W    SWAP,BSCR,SUB
+        ;DC.W    DUP,DOT
+        DC.W    SWAP
+        DC.W    OVER,ONEP,LIT,NUM_VSCREEN_BLKS,GREAT,ZBRAN
+        DC.W    RW2-*
+        DC.W    RW_D
+        DC.W    BRAN
+        DC.W    RW3-*
+RW2     DC.W    RW_V
+RW3     DC.W    SEMIS
+
+
 ;
 ; ######>> screen 72 <<
 ; ======>>  192  <<
 	DC	$C1	;immediate
 	DC	$A7	; ' (tick)
-	DC.W	RW-6
+	DC.W	rw
 TICK	DC.W	DOCOL,DFIND,ZEQU,ZERO,QERR,DROP,LITER
 	DC.W	SEMIS
 ;

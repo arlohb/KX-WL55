@@ -408,9 +408,9 @@ CHECK_RW_CMD_RESULTS
 .fail
         DC.W    SEMIS
 
-        ; FDC_READ ( MADDR CA HA SA --- f )
+        ; FDC_READ ( MADDR CA HA SA --- )
         ; Reads a sector from the FDC to the space at MADDR
-        ; On exit f=true indicates success.
+        ; Errors out on failure
 fdc_read
         DC      $88
         DC      "FDC_REA"
@@ -418,10 +418,14 @@ fdc_read
         DC.W    fdc_init
 FDC_READ
         DC.W    DOCOL
+        DC.W    ROT,DUP,SEEK
+        DC.W    ZEQU,LIT,6,QERR
+        DC.W    ROT,ROT
         DC.W    PREP_RW_CMD_STACK
         DC.W    LIT,$46
         DC.W    DO_READ
         DC.W    CHECK_RW_CMD_RESULTS
+        DC.W    ZEQU,LIT,8,QERR
         DC.W    SEMIS
 
         ; DO_WRITE
@@ -485,9 +489,9 @@ DO_WRITE; (Invisible word to send the command and do the write loop)
         nop
 
 last_fdc
-        ; FDC_WRITE ( MADDR CA HA SA --- f )
+        ; FDC_WRITE ( MADDR CA HA SA --- )
         ; Writes a sector from the FDC from the space at MADDR
-        ; On exit f=true indicates success.
+        ; Errors out on failure
 fdc_write
         DC      $89
         DC      "FDC_WRIT"
@@ -495,9 +499,13 @@ fdc_write
         DC.W    fdc_read
 FDC_WRITE
         DC.W    DOCOL
+        DC.W    ROT,DUP,SEEK
+        DC.W    ZEQU,LIT,6,QERR
+        DC.W    ROT,ROT
         DC.W    PREP_RW_CMD_STACK
         DC.W    LIT,$45
         DC.W    DO_WRITE
         DC.W    CHECK_RW_CMD_RESULTS
+        DC.W    ZEQU,LIT,8,QERR
         DC.W    SEMIS
 
