@@ -92,22 +92,24 @@
 ; C004 <<< WARM START ENTRY >>>
 ; C000 <<< COLD START ENTRY >>>
 ;
-; 4000-BFFF - BANK0/1 - unused by Forth
+; 4000-BFFF - BANK1 - unused by Forth
 ;
-; 3000-3FFF - FORTH RAM WORKSPACE
+; 4000-7FFF - BANK0 - \
+;                      >- FORTH RAM WORKSPACE (see below)
+; 3000-3FFF -         /
 
-; 4000                                          MEMEND
-; 	4 buffer sectors of VIRTUAL MEMORY
-; 3DF0						FIRST,RAMEND
-; 3DEE	RETURN STACK base		<== RP	RINIT
+; 8000                                          MEMEND
+; 	8 buffer sectors of VIRTUAL MEMORY
+; 6FE0						FIRST,RAMEND
+; 6FDE	RETURN STACK base		<== RP	RINIT
 ;
-; 3DA4
+; 6F94
 ;	INPUT LINE BUFFER
 ;	holds up to 132 characters
 ;	and is scanned upward by IN
 ;	starting at TIB
-; 3D20					<== IN	TIB
-; 3D1F	DATA STACK			<== SP	SP0,SINIT
+; 6F12					<== IN	TIB
+; 6F10	DATA STACK			<== SP	SP0,SINIT
 ;    |	grows downward from 3D1F
 ;    v
 ;    ^
@@ -124,8 +126,8 @@
 ; 3000	user #l table of variables	<= UP	DPINIT
 ;
 ; 2000-2FFF - Battery backed RAM
-; 2FFF						HI
-;	substitute for disc mass memory
+; 27FF						HI
+;	substitute for disc mass memory (screens 1-3)
 ; 2000						LO
 ;
 ; 0100-1FFF - HD6303 I/O SPACE
@@ -147,18 +149,17 @@
 ;	A contains the high byte, B, the low byte.
 ;**
 
-NBLK	equ	4		;# of disc buffer blocks for virtual memory
-MEMEND	equ	$4000	        ;end of ram
+NBLK	equ	3		;# of disc buffer blocks for virtual memory
+;MEMEND	equ	$8000	        ;end of ram - defined in memory_map.asm
 
-;  each block is 132 bytes in size,
-;  holding 128 characters
-BLKSIZE equ     132
+; size of a block of disk memory - should be the same as the bytes in a sector
+BLKSIZE equ     256
+
+; additional 4 bytes for status
+VBLKSIZE equ     BLKSIZE+4
 
 ; Address of first vmem buffer
-FIRSTV  equ     MEMEND-BLKSIZE*NBLK
-
-VDISK_HI    equ $2FFF
-VDISK_LO    equ $2000
+FIRSTV  equ     MEMEND-(VBLKSIZE*NBLK)
 
 ; RAM was here in origin in source file, now in memory_map.asm
 
@@ -1237,7 +1238,7 @@ LIMIT	DC.W	DOCON
 	DC	$C6
 	DC.W	LIMIT-8
 BBUF	DC.W	DOCON
-	DC.W	128
+	DC.W	BLKSIZE
 ;
 ; ======>>  60  <<
 	DC	$85
@@ -1245,8 +1246,7 @@ BBUF	DC.W	DOCON
 	DC	$D2
 	DC.W	BBUF-8
 BSCR	DC.W	DOCON
-	DC.W	8
-;	blocks/screen = 1024 / "B/BUF" = 8
+	DC.W	1024/BLKSIZE
 ;
 ; ======>>  61  <<
 	DC	$87
@@ -1974,7 +1974,8 @@ FQUERY	DC.W	DOCOL,TIB,AT,COLUMS
 	DC.W	FQUERY-8
 NULL	DC.W	DOCOL,BLK,AT,ZBRAN
 	DC.W	NULL2-*
-	DC.W	ONE,BLK,PSTORE
+        ;DC.W    LIT,"N",EMIT   ; DEBUG!
+	DC.W	ONE,BLK,PSTORE                      ; TRAIL - Adds 1 to BLK
 	DC.W	ZERO,IN,STORE,BLK,AT,BSCR,MODLAB
 	DC.W	ZEQU
 ;     check for end of screen
@@ -2036,11 +2037,15 @@ PAD	DC.W	DOCOL,HERE,CLITER
 	DC	"WOR"	;DC	3,WORD
 	DC	$C4
 	DC.W	PAD-6
-WORD	DC.W	DOCOL,BLK,AT,ZBRAN
+WORD	DC.W	DOCOL
+        ;DC.W    LIT,"W",EMIT,LIT,"b",EMIT,BLK,AT,DOT,LIT,"i",EMIT,IN,AT,DOT ; DEBUG!
+        ;DC.W    LIT,"W",EMIT,DOTS   ; DEBUG!
+        DC.W    BLK,AT,ZBRAN
 	DC.W	WORD2-*
 	DC.W	BLK,AT,BLOCK,BRAN
 	DC.W	WORD3-*
 WORD2	DC.W	TIB,AT
+        ;DC.W    LIT,"t",EMIT ; DEBUG!
 WORD3	DC.W	IN,AT,PLUS,SWAP,ENCLOS,HERE,CLITER
 	DC	34
 	DC.W	BLANKS,IN,PSTORE,OVER,SUB,TOR,R,HERE
@@ -2090,7 +2095,9 @@ NUMB3	DC.W	SEMIS
 	DC	"-FIN"	;DC	4,-FIND
 	DC	$C4
 	DC.W	NUMB-9
-DFIND	DC.W	DOCOL,BL,WORD,HERE,CONTXT,AT,AT
+DFIND	DC.W	DOCOL
+        ;DC.W    LIT,"-",EMIT,LIT,"F",EMIT,DOTS  ; DEBUG!
+        DC.W    BL,WORD,HERE,CONTXT,AT,AT
 	DC.W	PFIND,DUP,ZEQU,ZBRAN
 	DC.W	DFIND2-*
 	DC.W	DROP,HERE,LATEST,PFIND
@@ -2197,6 +2204,7 @@ DLITE2	DC.W	SEMIS
 	DC	$D4
 	DC.W	DLITER-11
 INTERP	DC.W	DOCOL
+        ;DC.W    LIT,"I",EMIT,DOTS   ; DEBUG!
 INTER2	DC.W	DFIND,ZBRAN
 	DC.W	INTER5-*
 	DC.W	STATE,AT,LESS
@@ -2293,6 +2301,12 @@ ABORT	DC.W	DOCOL,SPSTOR,DEC,QSTACK,DRZERO,CR,PDOTQ
 	DC	"fig-Forth 6303"
 	DC.W	FORTH,DEFIN
         DC.W    MTBUF
+        DC.W    FDC_INIT,ZEQU,ZBRAN
+        DC.W    ABORT2-*
+	DC.W	PDOTQ
+	DC	25
+	DC	" WARNING: FDC init failed"
+ABORT2
 	DC.W	QUIT
 ;	DC.W	SEMIS	;never executed
 ;
@@ -2478,12 +2492,11 @@ PREV	DC.W	DOCON
 	DC	"+BU"	;DC	3,+BUF
 	DC	$C6
 	DC.W	PREV-7
-PBUF	DC.W	DOCOL,CLITER
-	DC	$84
+PBUF	DC.W	DOCOL,LIT,VBLKSIZE
 	DC.W	PLUS,DUP,LIMIT,EQUAL,ZBRAN
 	DC.W	PBUF2-*
 	DC.W	DROP,FIRST
-PBUF2	DC.W	DUP,PREV,AT,SUB
+PBUF2	DC.W	DUP,PREV,AT,SUB,ZEQU
 	DC.W	SEMIS
 ;
 ; ======>>  171  <<
@@ -2596,7 +2609,9 @@ MESS4	DC.W	SEMIS
 	DC	"LOA"	;DC	3,LOAD	;input:scr #
 	DC	$C4
 	DC.W	MESS-10
-LOAD	DC.W	DOCOL,BLK,AT,TOR,IN,AT,TOR,ZERO,IN,STORE
+LOAD	DC.W	DOCOL
+        ;DC.W    LIT,"L",EMIT,DOTS   ; DEBUG!
+        DC.W    BLK,AT,TOR,IN,AT,TOR,ZERO,IN,STORE
 	DC.W	BSCR,STAR,BLK,STORE
 	DC.W	INTERP,FROMR,IN,STORE,FROMR,BLK,STORE
 	DC.W	SEMIS
@@ -2673,7 +2688,7 @@ BREAD	DC.W	*+2
 ;
 ; The next 3 words are written to create a substitute for disc
 ; mass memory,located between $2000 & $2FFF in ram.
-; The logic in R/W has been adjusted to that the first screen
+; The logic in R/W has been adjusted so that the first screen
 ; is screen 1, rather than screen 0, as there is other logic
 ; elsewhere which says that block 0 indicates terminal I/O.
 ;
@@ -2695,28 +2710,82 @@ HI	DC.W	DOCON
 ;
 ; ######>> screen 69 <<
 ; ======>>  191  <<
-	DC	$83
-	DC	"R/"	;DC	2,R/W
-	DC	$D7
+;
+; : R/W_V ( BUFADR BLOCKn fRnW --- )  ( fRnW : 1=READ 0=WRITE )
+;     >R ( save boolean )
+;     B/SCR - ( adjust so that screen 1 is the first )
+;     B/BUF * LO + ( convert to address )
+;     DUP HI > OVER LO < OR IF
+;       ." Range ;"
+;       QUIT
+;     THEN
+;     R> ( retrieve boolean )
+;     IF ( read )
+;       SWAP
+;     THEN
+;     B/BUF CMOVE
+;   ;
+
+rw_v	DC	$85
+	DC	"R/W_"	;DC	2,R/W
+	DC	$D6
 	DC.W	HI-5
-RW	DC.W	DOCOL,TOR,BSCR,SUB,BBUF,STAR,LO,PLUS
+RW_V	DC.W	DOCOL,TOR,BSCR,SUB,BBUF,STAR,LO,PLUS
         DC.W    DUP,HI,GREAT,OVER,LO,LESS,ORLAB,ZBRAN
-	DC.W	RW2-*
+	DC.W	RW_V2-*
 	DC.W	PDOTQ
 	DC	8
 	DC	" Range ;"	;DC	8, Range ;?
 	DC.W	QUIT
-RW2	DC.W	FROMR,ZBRAN
-	DC.W	RW3-*
+RW_V2	DC.W	FROMR,ZBRAN
+	DC.W	RW_V3-*
 	DC.W	SWAP
-RW3	DC.W	BBUF,CMOVE
+RW_V3	DC.W	BBUF,CMOVE
 	DC.W	SEMIS
+
+MAX_DSN EQU 80*2*9-1
+
+; : DSN->CHS ( dsn --- cyl head sector )
+;   ( Convert disk sector number, starting at 0, to CHS )
+;   DUP MAX_DSN > IF ." Range ;" QUIT THEN
+;   DUP 1 AND SWAP 2 / ( --- head dsn/2 )
+;   9 /MOD SWAP 1+ ( --- head cyl sector )
+;   ROT SWAP ( --- cyl head sector )
+; ;
+
+
+
+; : R/W_D ( BUFADR BLOCKn fRnW --- )
+;     >R ( save boolean )
+;     NUM_VSCREENS 1+ - ( Get 0-based sector number )
+;     DSN->CHS ( Convert to cyl head sector )
+;     R> IF
+;       FDC_READ
+;     ELSE
+;       FDC_WRITE
+;     THEN
+; ;
+
+; : R/W ( BUFADR BLOCKn fRnW --- )
+;     OVER NUM_VSCREENS GREAT IF
+;       RW_V
+;     ELSE
+;       RW_D
+;     THEN
+; ;
+rw	DC	$83
+	DC	"R/"	;DC	2,R/W
+	DC	$D7
+	DC.W	rw_v
+RW      DC.W DOCOL,RW_V,SEMIS
+
+
 ;
 ; ######>> screen 72 <<
 ; ======>>  192  <<
 	DC	$C1	;immediate
 	DC	$A7	; ' (tick)
-	DC.W	RW-6
+	DC.W	rw
 TICK	DC.W	DOCOL,DFIND,ZEQU,ZERO,QERR,DROP,LITER
 	DC.W	SEMIS
 ;

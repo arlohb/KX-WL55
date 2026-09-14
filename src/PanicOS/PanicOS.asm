@@ -31,6 +31,9 @@ reset:
     LDAA #$00
     STAA PORT2
 
+    LDAA #$10
+    STAA BANKSEL0   ; RAM workspace for Forth 4000-7FFF
+
     JSR lcd_init
 
     JSR keyb_init
